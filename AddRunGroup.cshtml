@@ -1076,7 +1076,8 @@
                 getLoadIdsFor(actionId, esgTypeIds);
                 getRunIdsFor(actionId, esgTypeIds); //calls getAssociatedEsgTypes after the request finishes, which in turn calls validateSelectlist
             });
-            getOpeningAttributionRunGroups();            
+            getOpeningAttributionRunGroups();    
+            selectlistSwitcher();        
         });
 
         // RUN NOW
@@ -1133,8 +1134,8 @@
                 form.find("input[name=ProductName]").val("").change();
             }
             getAssociatedEsgTypes();
-            getOpeningAttributionRunGroups();
             applyVcfActionRules();
+            getOpeningAttributionRunGroups();
         });
 
         // when user clicks a single product
@@ -1375,6 +1376,7 @@
             if (makeAjaxCall)
                 getAssociatedEsgTypes();
             getOpeningAttributionRunGroups();
+            validateSelectlists();
         }
 
         function runTypeClicked(makeAjaxCall) {
@@ -1382,6 +1384,7 @@
             if (makeAjaxCall)
                 getAssociatedEsgTypes();
             getOpeningAttributionRunGroups();
+            validateSelectlists();
         }
 
         function applyDataActionRules() {
@@ -1715,14 +1718,6 @@
             return result;
         }
 
-        function disableCompleteButton() {
-            completeButton.prop("disabled", true);
-        }
-
-        function enableCompleteButton() {
-            completeButton.prop("disabled", false);
-        }
-
         function useBaseRunGroupData() {
             // each run-id row has an attribute called "data-val-run-id" which holds the original base run group run id            
             $.each($("#data-section tbody").find(".run-id-type"), function (index, runIdDropDown) {                
@@ -1783,10 +1778,9 @@
         function getAssociatedEsgTypes() {
             var productIds = getSelectedProductIds();
             var runTypeIds = getSelectedRunTypeIds();
-            // hide rows before we make the request
             if (productIds.length > 0 && runTypeIds.length > 0) {
-                disableCompleteButton();
-                $.ajax({
+                var promises = [];
+                var request = $.ajax({
                     type: 'POST',
                     url: "/RunGroup/GetEsgTypes",
                     data: JSON.stringify({
@@ -1808,20 +1802,16 @@
                     }
                 }).fail(function (data) {
                     console.log("Error");
-                }).then(function (data) {
-                    validateSelectlists();
-                }).always(function (data) {
-                    enableCompleteButton();
                 });
-            } else {
-                allEsgActionRows.hide();
-                validateSelectlists();
-            }
+                promises.push(request);
+                $.when.apply(null, promises).done(function () {
+                    return;
+                });
+            } 
         }
 
         function getOpeningAttributionRunGroups() {
             var productIds = getSelectedProductIds();
-            disableCompleteButton();
             if (productIds.length > 0) {
                 $.ajax({
                     type: 'POST',
@@ -1863,10 +1853,6 @@
                     }
                 }).fail(function (data) {
                     console.log("Error");
-                }).always(function (data) {
-                    enableCompleteButton();
-                    esgOptions.trigger("change");
-                    dataOptions.trigger("change");
                 });
             } else {
                 // hide select list and show error message
@@ -1905,8 +1891,9 @@
     }
 
         function getLoadIdsFor(actionId, sourceIds) {
+            var promises = [];
             $(sourceIds).each(function (index, sourceId) {
-                $.ajax({
+                var request = $.ajax({
                     type: 'POST',
                     url: "/RunGroup/GetSourceLoadIdsFor",
                     data: {
@@ -1934,7 +1921,11 @@
                 }).fail(function (data) {
                     console.log("Error");
                 });
+                promises.push(request);
             });
+            $.when.apply(null, promises).done(function () {
+                return;
+            })
         }
 
         function getRunIdsFor(actionId, sourceIds) {
@@ -1973,12 +1964,7 @@
                 promises.push(request);
             });
             $.when.apply(null, promises).done(function () {
-                if (jQuery.inArray(actionId, dataActions) !== -1)
-                    form.find("#DataOptionId").trigger("change");
-                else if (jQuery.inArray(actionId, esgActions) !== -1)
-                    form.find("#EsgOptionId").trigger("change");
-
-                getAssociatedEsgTypes();
+                return;
             })
         }
     });

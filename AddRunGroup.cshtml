@@ -1,0 +1,1985 @@
+@using ComponentModels
+@model HedgingGui.Models.AddRunGroupViewModel
+@{
+    ViewBag.Title = "Add Run Group";
+        //PageData["active_tab"] = "External Inputs";
+}
+
+<script src="http://malsup.github.com/jquery.form.js"></script>
+<script src="~/Scripts/jquery.unobtrusive-ajax.js"></script>
+<script src="https://cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.4/css/jquery.dataTables.min.css">
+
+<br /><br />
+<span class="h2" style="margin-left: 15%;">Add Run Group</span>
+<div id="add-run-group-progress-bar">
+</div>
+<div class="content add-run-group-container">
+    @using (Html.BeginForm("AddRunGroup", "RunGroup", FormMethod.Post, new { style = "width:100%;" }))
+    {
+        <div id="general-card" class="next-card section-wrapper">
+            <div class="section-heading">
+                <h2>General</h2>
+                <svg id="general-dropdown" class="next-icon section-dropdown-icon up" viewBox="0 0 24 24">
+                    <path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/>
+                </svg>
+            </div>    
+            <div class="sub-section-wrapper">                       
+                <input type="hidden" name="RunGroupId" id="RunGroupId" value="@Model.RunGroupId" />                
+                @if (Model.BaseRunGroup != null && Model.BaseRunGroup.Id > 0)
+                {
+                    <input type="hidden" name="BaseRunGroupId" id="BaseRunGroupId" value="@Model.BaseRunGroup.Id" />
+                    <div class="sub-section">                    
+                        <h3 class="sub-heading">Base Run Group</h3>                        
+                        @Html.DisplayFor(model => model.BaseRunGroup.Name, new { @Value = Model.BaseRunGroup.Name })             
+                    </div>
+                }
+
+                <div class="sub-section">
+                    <h3 class="sub-heading">Name</h3>
+                    @Html.TextBoxFor(model => model.RunGroupName, new { placeholder = "Please enter name for RunGroup", @class = "next-input" })                                          
+                    <br />
+                    @Html.ValidationMessageFor(m => m.RunGroupName, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                           
+                </div>
+
+                <div class="sub-section">  
+                    <h3 class="sub-heading">Description</h3>
+                    @if (Model.BaseRunGroup != null && Model.BaseRunGroup.Id < 0)
+                    {
+                        <textarea name="RunGroupDescription" id="RunGroupDescription" >@Model.RunGroupDescription</textarea>
+                        @*@Html.TextAreaFor(m => m.RunGroupDescription, new { @class = "next-textarea", placeholder = "Text about the input",  @Text=Model.BaseRunGroup.Description })*@
+                    }
+                    else
+                    {
+                        @Html.TextAreaFor(m => m.RunGroupDescription, new { @class = "next-textarea", placeholder = "Text about the input" })
+                    }
+                    @Html.ValidationMessageFor(m => m.RunGroupDescription, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                           
+                </div>
+        
+                <div class="sub-section">
+                    <h3 class="sub-heading">Action Type</h3>
+                    @{var atLeastOneActionType = false;}
+                    @foreach (var actionType in Model.ActionTypeNames)
+                    {
+
+                        if ((Roles.IsUserInRole("Administrator") || Roles.IsUserInRole("SuperUser"))
+                            || (actionType.Key == Constants.ActionTypeAnalysis && Roles.IsUserInRole("AnalysisRunGroupEditor"))
+                            || (actionType.Key == Constants.ActionTypeProduction && Roles.IsUserInRole("ProductionRunGroupEditor")))
+                        {
+                            <div class="next-input-wrapper">
+                                <label class="next-label next-label--switch inline" for="ActionTypeNameId">@actionType.Value</label>
+                                <input class="next-radio" id="@actionType.Key" type="radio" name="ActionTypeNameId" value="@actionType.Key" @(actionType.Key == Model.ActionTypeNameId ? "checked":"")>
+                                <span class="next-radio--styled"></span>
+                             </div>
+                            atLeastOneActionType = true;
+                            continue;
+                        }
+                    }
+                    @if (!atLeastOneActionType)
+                    { <span>Not Authorized for any Action Types</span> }
+                    <br />
+                    @Html.ValidationMessageFor(m => m.ActionTypeNameId, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })
+                </div>
+        
+                <div class="sub-section">
+                    <h3 class="sub-heading">Country Unit</h3>
+                    @foreach (var countryUnit in Model.CountryUnits)
+                    {
+                        <div class="next-input-wrapper">
+                            <label class="next-label next-label--switch inline" for="CountryUnitId">@countryUnit.Value</label>
+                            <input class="next-radio" id="@countryUnit.Key" type="radio" name="CountryUnitId" value="@countryUnit.Key" checked>
+                            <span class="next-radio--styled"></span>
+                        </div>                 
+                    }
+                    <br />
+                    @Html.ValidationMessageFor(m => m.CountryUnitId, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                           
+                </div>
+       
+                <div class="sub-section">
+                    <h3 class="sub-heading">Valuation Date</h3>
+                    @if (Model.RunGroupId < 0 || Model.BaseRunGroup != null)
+                    {
+                        <span>@Html.TextBoxFor(model => model.ValuationDate, new { @class = "has-datepicker", @Value = Model.ValuationDate.ToString("yyyy-MM-dd"), disabled = "disabled" })</span>
+                    } else {
+                        <span>@Html.TextBoxFor(model => model.ValuationDate, new { @class = "has-datepicker", @Value = Model.ValuationDate.ToString("yyyy-MM-dd") })</span>
+                    }
+                    @*<input class="has-datepicker" id="valuation-date" class="next-input" name="ValuationDate" type="text" value="@(Model.ValuationDate.ToString("yyyy-MM-dd"))"/>*@
+                    <br />
+                    @Html.ValidationMessageFor(m => m.ValuationDate, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                           
+                </div>
+
+                <div class="sub-section date-time-section">  
+                    <div style="text-align:center;">
+                        <h3 class="sub-heading">Run Now</h3>
+                        @Html.CheckBoxFor(x => x.RunNow)
+                    </div>
+                    <div>
+                        <h3 class="sub-heading">Processing Date</h3>
+                        @Html.TextBoxFor(model => model.OriginalProcessingDate, new { @class = "has-datepicker", @Value = Model.OriginalProcessingDate.ToString("yyyy-MM-dd") }) 
+                        @*<input class="has-datepicker" id="processing-date" class="next-input" name="ProcessingDate" type="text" value="@(Model.OriginalProcessingDate.ToString("yyyy-MM-dd"))"/>*@
+                        <br />
+                        @Html.ValidationMessageFor(m => m.OriginalProcessingDate, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })
+                    </div>
+                    <div>
+                        <h3 class="sub-heading">Trigger Time</h3>
+                        <input type="time" id="TriggerTime" class="time" name="TriggerTime" min="00:00" max="23:59" value="@Model.TriggerTime.ToString()" required />                        
+                        <br />
+                        @Html.ValidationMessageFor(m => m.TriggerTime, null, new { @class = "validation-message", style = "color:red;font-size:smaller;overflow-wrap:break-word;" })
+                    </div>
+                </div>   
+            </div>
+         </div>
+        
+          <!-- PRODUCTS + RUN TYPE -->
+         <div id="products-run-types-card" class="next-card section-wrapper">      
+            <div class="section-heading">
+                <h2>Inputs</h2>
+                <svg id="products-run-type-dropdown" class="next-icon section-dropdown-icon up" viewBox="0 0 24 24">
+                    <path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/>
+                </svg>
+            </div>   
+            <div class="sub-section-wrapper">
+                <div class="sub-section">
+                    <h3 class="sub-heading">Products</h3>       
+                    <input type="hidden" id="SelectedProducts" name="SelectedProducts" value="" />
+                    <!-- TODO: Add datatable -->
+                    
+                    <div id="quickSelectContainer" style="display:inline-block; position:relative;">
+                        <a data-role="button" class="btn" id="btn-quickselect" title="QuickSelect" style="float:left; top: 50%; transform: translateY(-50%); user-select: none;"><b><u>Quick Select</u></b></a>
+                        <div id="quickSelectCheckboxes" style="display:none; margin-left:185px">
+                            <input type="checkbox" id="EURCheckbox" style="margin-left:15px" /> EUR
+                            <br />
+                            <input type="checkbox" id="GBPCheckbox"  style="margin-left:15px;" /> GBP
+                        </div>
+                     </div>
+                    <table id="products-table" style="width:100%">
+                        <thead style="border-bottom:1px solid #0072ba">
+                            <tr>
+                                <td><input type="checkbox" id="All_Products" name="All_Products" /></td>
+
+                                <td><b>Name</b></td>
+                                <td><b>Currency</b></td>
+                                <td><b>Source</b></td>
+                                <td><b>Is VCF</b></td>
+                                <td><b>Is VCF Related</b></td>                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Products.Count; i++)
+                            {
+                                <tr class="products-wrapper" id="product-@Model.Products[i].Id">                
+                                    <td>@Html.CheckBoxFor(x => x.Products[i].Checked, new
+                                   {
+                                       id = "product-" + Model.Products[i].Id,
+                                       @class = "product-checks",
+                                       data_val_currency = Model.Products[i].Currency, // TODO: search by this
+                                       data_val_source = Model.Products[i].Source,
+                                       data_val_if_vcf = Model.Products[i].IfVcf.ToString().ToLower(),
+                                       data_val_if_vcf_related = Model.Products[i].IfVcfRelated.ToString().ToLower()
+                                   })</td>                    
+                                    <td>@Html.LabelFor(x => x.Products[i].Checked, Model.Products[i].Name, new { @class = "product-name" })</td>
+                                    <td>@Html.LabelFor(x => x.Products[i].Currency, Model.Products[i].Currency, new { @class = "currency-name" })</td>
+                                    <td>@Model.Sources[Model.Products[i].Source]</td>
+                                    <td>@Model.Products[i].IfVcf</td>
+                                    <td>@Model.Products[i].IfVcfRelated</td>                                                                                                            
+                                </tr>
+                            }        
+                        </tbody>
+                    </table>
+                    @Html.TextBoxFor(x => x.ProductName, new { style = "visibility:hidden;height:0" })<br />
+                    @Html.ValidationMessageFor(m => m.ProductName, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })
+                </div>
+                <div class="sub-section">
+                    <h3 class="sub-heading">Run Types</h3>    
+                    <input type="hidden" id="SelectedRunTypes" name="SelectedRunTypes" value="" />   
+                    <table id="run-types-table">
+                        <thead style="border-bottom:1px solid #0072ba">
+                            <tr>                    
+                                <td><input type="checkbox" id="All_RunTypes" name="All_RunTypes" /></td>            
+                                <td><b>Name</b></td>                                
+                            </tr>
+                        </thead>
+                        <tbody>                            
+                            @for (int i = 0; i < Model.RunTypes.Count; i++)
+                            {
+                                <tr class="run-types-wrapper" id="run-type-@Model.RunTypes[i].Id">                                    
+                                    <td>@Html.CheckBoxFor(x => x.RunTypes[i].Checked, new { id = "runType-" + Model.RunTypes[i].Id, @class = "run-type-checks" })</td>
+                                    <td>@Html.LabelFor(x => x.RunTypes[i].Checked, Model.RunTypes[i].Name, new { @class = "run-type-name" })</td>
+                                </tr>
+                            }                            
+                        </tbody>
+                    </table>
+                    @Html.TextBoxFor(x => x.RunTypeName, new { style = "visibility:hidden;height:0" })<br />
+                    @Html.ValidationMessageFor(m => m.RunTypeName, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })
+                </div>
+                @if (Model.AttributionOpenings != null)
+                {
+                    var containerStyle = Model.AttributionOpeningId.HasValue ? "" : "display:none;";
+                    var listStyle = Model.AttributionOpenings.Any() ? "" : "display:none;";
+                    var errorStyle = Model.AttributionOpenings.Any() ? "display:none;" : "";  
+                    <div id="attribution-opening" class="sub-section" style="@(containerStyle)">
+                        <h3 class="sub-heading">Opening Attribution</h3>    
+                        <div id="attribution-list" style="@(listStyle)">
+                            @Html.DropDownListFor(m => m.AttributionOpeningId, new SelectList(Model.AttributionOpenings, "Key", "Value"), null, new { @style = "width: 100%;disabled:true" })
+                            @Html.ValidationMessageFor(m => m.AttributionOpeningId, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })
+                        </div>
+                        <div id="attribution-error" style="@(errorStyle)">
+                            The current products selected along with the chosen valuation date have no valid run group.<br />
+                            There must exist at least one run group, with a valuation date before the one you have set, with a successfully completed "Create Model Point File" and "Run Projection" action for each product you have selected.
+                        </div>                        
+                    </div>                    
+                }
+            </div>
+        </div>       
+        
+        <div id="configuration-section" class="next-card section-wrapper">        
+            <div class="section-heading">
+                <h2>Configuration</h2>
+                <svg id="configuration-dropdown" class="next-icon section-dropdown-icon up" viewBox="0 0 24 24">
+                    <path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/>
+                </svg>
+            </div>
+            <div class="sub-section-wrapper">
+                <h3 class="sub-heading">Base Template</h3>
+                <div id="config-master-select-wrapper" class="next-select__wrapper">
+                    <div id="config-master-dropdown-wrapper">
+                        @Html.DropDownListFor(m => m.ConfigMasterId, new SelectList(Model.ConfigMasters, "Key", "Value"), null, new { @class = "next-select" })
+                        <br />
+                        <svg class="next-icon" viewBox="0 0 24 24"><path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/></svg>
+                    </div>                    
+                </div>      
+                <h4 class="sub-heading--small">Assumptions</h4>              
+                <div class="next-select__wrapper">
+                    @Html.DropDownListFor(m => m.ConfigAssumptionsConfigSetId, new SelectList(Model.ConfigAssumptionsConfigSets, "Key", "Value"), null, new { @class = "next-select" })                    
+                    <svg class="next-icon" viewBox="0 0 24 24"><path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/></svg>
+                </div> 
+                <br />
+                @Html.ValidationMessageFor(m => m.ConfigAssumptionsConfigSetId, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                
+                <h4 class="sub-heading--small">ESG</h4>      
+                <div class="next-select__wrapper">
+                    @Html.DropDownListFor(m => m.ConfigEsgConfigSetId, new SelectList(Model.ConfigEsgConfigSets, "Key", "Value"), null, new { @class = "next-select" })                    
+                    <svg class="next-icon" viewBox="0 0 24 24"><path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/></svg>
+                </div> 
+                <br />
+                    @Html.ValidationMessageFor(m => m.ConfigEsgConfigSetId, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                
+                <h4 class="sub-heading--small">Data</h4>  
+                <div class="next-select__wrapper">
+                    @Html.DropDownListFor(m => m.ConfigDataConfigSetId, new SelectList(Model.ConfigDataConfigSets, "Key", "Value"), null, new { @class = "next-select" })                    
+                    <svg class="next-icon" viewBox="0 0 24 24"><path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/></svg>
+                </div> 
+                <br />
+                @Html.ValidationMessageFor(m => m.ConfigDataConfigSetId, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                
+            </div>
+        </div>
+        
+        <div id="data-section" class="next-card section-wrapper">      
+            <div class="section-heading">
+                <h2>Data</h2>
+                <svg id="data-dropdown" class="next-icon section-dropdown-icon up" viewBox="0 0 24 24">
+                    <path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/>
+                </svg>
+            </div>        
+            <div class="sub-section-wrapper">                  
+                <div class="section-options">
+                    <div class="next-select__wrapper">
+                        @Html.DropDownListFor(m => m.DataOptionId, new SelectList(Model.DataOptions, "Key", "Value", Model.DataOptionId), null, new { @class = "next-select" })
+                        <svg class="next-icon" viewBox="0 0 24 24"><path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/></svg>
+                    </div> 
+                </div>
+                <br />
+                @Html.ValidationMessageFor(m => m.DataOptionId, null, new { @class = "validation-message", style = "color:red;font-size:smaller;" })                
+                <div class="sub-section">
+                    <h4 class="action-headers">Import Policy And Fund</h4>
+                    @Html.Raw(Constants.RunGroupTableEmpty)
+                    <table id="@Constants.ActionImportPolicyAndFundData" class="action-tables">
+                        <thead class="styled-header">
+                            <tr>
+                                <td class="th-source">Source</td>
+                                <td class="th-add-new">New</td>
+                                <td class="run-id-type">Run ID</td>
+                                <td class="load-id-type">Load ID</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!--IMPORT POLICY AND FUND-->
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceAsc" class="source-@Constants.SourceAsc">
+                                <td>@Model.Sources[Constants.SourceAsc]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundAscChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundAscRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundAscRunId, new SelectList(Model.ImportPolicyAndFundAscRunIds, "Key", "Value"))
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundAscLoadId, new SelectList(Model.ImportPolicyAndFundAscLoadIds, "Key", "Value", Model.ImportPolicyAndFundAscLoadId))
+                                </td>
+                            </tr>   
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceAsio" class="source-@Constants.SourceAsio">
+                                <td>@Model.Sources[Constants.SourceAsio]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundAsioChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundAsioRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundAsioRunId, new SelectList(Model.ImportPolicyAndFundAsioRunIds, "Key", "Value", Model.ImportPolicyAndFundAsioRunId))
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundAsioLoadId, new SelectList(Model.ImportPolicyAndFundAsioLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr>
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceAsli" class="source-@Constants.SourceAsli">
+                                <td>@Model.Sources[Constants.SourceAsli]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundAsliChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundAsliRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundAsliRunId, new SelectList(Model.ImportPolicyAndFundAsliRunIds, "Key", "Value"))                              
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundAsliLoadId, new SelectList(Model.ImportPolicyAndFundAsliLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr>
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceIc" class="source-@Constants.SourceIc">
+                                <td>@Model.Sources[Constants.SourceIc]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundIcChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundIcRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundIcRunId, new SelectList(Model.ImportPolicyAndFundIcRunIds, "Key", "Value", Model.ImportPolicyAndFundIcRunId))                              
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundIcLoadId, new SelectList(Model.ImportPolicyAndFundIcLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceIfl" class="source-@Constants.SourceIfl">
+                                <td>@Model.Sources[Constants.SourceIfl]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundIflChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundIflRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundIflRunId, new SelectList(Model.ImportPolicyAndFundIflRunIds, "Key", "Value", Model.ImportPolicyAndFundIflRunId))                              
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundIflLoadId, new SelectList(Model.ImportPolicyAndFundIflLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceLmp" class="source-@Constants.SourceLmp">
+                                <td>@Model.Sources[Constants.SourceLmp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundLmpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundLmpRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundLmpRunId, new SelectList(Model.ImportPolicyAndFundLmpRunIds, "Key", "Value", Model.ImportPolicyAndFundLmpRunId))                              
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundLmpLoadId, new SelectList(Model.ImportPolicyAndFundLmpLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceSri" class="source-@Constants.SourceSri">
+                                <td>@Model.Sources[Constants.SourceSri]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundSriChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundSriRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundSriRunId, new SelectList(Model.ImportPolicyAndFundSriRunIds, "Key", "Value", Model.ImportPolicyAndFundSriRunId))                              
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundSriLoadId, new SelectList(Model.ImportPolicyAndFundSriLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportPolicyAndFundData-@Constants.SourceDirectGermany" class="source-@Constants.SourceDirectGermany">
+                                <td>@Model.Sources[Constants.SourceDirectGermany]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportPolicyAndFundDirectGermanyChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportPolicyAndFundDirectGermanyRunId)">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundDirectGermanyRunId, new SelectList(Model.ImportPolicyAndFundDirectGermanyRunIds, "Key", "Value", Model.ImportPolicyAndFundDirectGermanyRunId))                              
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportPolicyAndFundDirectGermanyLoadId, new SelectList(Model.ImportPolicyAndFundDirectGermanyLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr> 
+                        </tbody>
+                    </table>
+                </div>
+                    
+                <!--IMPORT VCF --> 
+                <div class="sub-section">
+                    <h4 class="action-headers">Import VCF Data</h4>
+                    @Html.Raw(Constants.RunGroupTableEmpty)
+                    <table id="@Constants.ActionImportVcfData" class="action-tables">
+                        <thead class="styled-header">
+                            <tr>                        
+                                <td class="th-add-new">New</td>
+                                <td class="run-id-type">Run ID</td>
+                                <td class="load-id-type">Load ID</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="@Constants.ActionImportVcfData-@Model.TargetVcfSource" class="source-@Model.TargetVcfSource">
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportVcfDataChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportVcfDataRunId)">
+                                    @Html.DropDownListFor(m => m.ImportVcfDataRunId, new SelectList(Model.ImportVcfDataRunIds, "Key", "Value", Model.ImportVcfDataRunId))                              
+                                </td>
+                                <td class="load-id-type">
+                                    @Html.DropDownListFor(m => m.ImportVcfDataLoadId, new SelectList(Model.ImportVcfDataLoadIds, "Key", "Value"))                                
+                                </td>
+                            </tr> 
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- JOIN FUND AND VCF SOURCE -->
+                <div class="sub-section">
+                    <h4 class="action-headers">Join Fund And Vcf Source</h4>
+                    @Html.Raw(Constants.RunGroupTableEmpty)
+                    <table id="@Constants.ActionJoinFundAndVcfSource" class="action-tables">
+                        <thead class="styled-header">
+                            <tr>
+                                <td class="th-source">Source</td>
+                                <td class="th-add-new">New</td>
+                                <td class="run-id-type">Run ID</td>
+                            </tr>
+                        </thead>
+                        <tbody>                           
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceAsc" class="source-@Constants.SourceAsc">
+                                <td>@Model.Sources[Constants.SourceAsc]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceAscChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceAscRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceAscRunId, new SelectList(Model.JoinFundAndVcfSourceAscRunIds, "Key", "Value", Model.JoinFundAndVcfSourceAscRunId))                              
+                                </td>
+                            </tr>   
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceAsio" class="source-@Constants.SourceAsio">
+                                <td>@Model.Sources[Constants.SourceAsio]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceAsioChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceAsioRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceAsioRunId, new SelectList(Model.JoinFundAndVcfSourceAsioRunIds, "Key", "Value", Model.JoinFundAndVcfSourceAsioRunId))                              
+                                </td>
+                            </tr>
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceAsli" class="source-@Constants.SourceAsli">
+                                <td>@Model.Sources[Constants.SourceAsli]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceAsliChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceAsliRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceAsliRunId, new SelectList(Model.JoinFundAndVcfSourceAsliRunIds, "Key", "Value", Model.JoinFundAndVcfSourceAsliRunId))                              
+                                </td>
+                            </tr>
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceIc" class="source-@Constants.SourceIc">
+                                <td>@Model.Sources[Constants.SourceIc]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceIcChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceIcRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceIcRunId, new SelectList(Model.JoinFundAndVcfSourceIcRunIds, "Key", "Value", Model.JoinFundAndVcfSourceIcRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceIfl" class="source-@Constants.SourceIfl">
+                                <td>@Model.Sources[Constants.SourceIfl]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceIflChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceIflRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceIflRunId, new SelectList(Model.JoinFundAndVcfSourceIflRunIds, "Key", "Value", Model.JoinFundAndVcfSourceIflRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceLmp" class="source-@Constants.SourceLmp">
+                                <td>@Model.Sources[Constants.SourceLmp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceLmpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceLmpRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceLmpRunId, new SelectList(Model.JoinFundAndVcfSourceLmpRunIds, "Key", "Value", Model.JoinFundAndVcfSourceLmpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceSri" class="source-@Constants.SourceSri">
+                                <td>@Model.Sources[Constants.SourceSri]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceSriChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceSriRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceSriRunId, new SelectList(Model.JoinFundAndVcfSourceSriRunIds, "Key", "Value", Model.JoinFundAndVcfSourceSriRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionJoinFundAndVcfSource-@Constants.SourceDirectGermany" class="source-@Constants.SourceDirectGermany">
+                                <td>@Model.Sources[Constants.SourceDirectGermany]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.JoinFundAndVcfSourceDirectGermanyChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.JoinFundAndVcfSourceDirectGermanyRunId)">
+                                    @Html.DropDownListFor(m => m.JoinFundAndVcfSourceDirectGermanyRunId, new SelectList(Model.JoinFundAndVcfSourceDirectGermanyRunIds, "Key", "Value", Model.JoinFundAndVcfSourceDirectGermanyRunId))                              
+                                </td>
+                            </tr> 
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- CREATE FLAT FILE -->
+                <div class="sub-section">
+                    <h4 class="action-headers">Create Flat File</h4>
+                    @Html.Raw(Constants.RunGroupTableEmpty)
+                    <table id="@Constants.ActionCreateFlatFile" class="action-tables">
+                        <thead class="styled-header">
+                            <tr>
+                                <td class="th-source">Source</td>
+                                <td class="th-add-new">New</td>
+                                <td class="run-id-type">Run ID</td>
+                            </tr>
+                        </thead>
+                        <tbody>                           
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceAsc" class="source-@Constants.SourceAsc">
+                                <td>@Model.Sources[Constants.SourceAsc]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileAscChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileAscRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileAscRunId, new SelectList(Model.CreateFlatFileAscRunIds, "Key", "Value", Model.CreateFlatFileAscRunId))                              
+                                </td>
+                            </tr>   
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceAsio" class="source-@Constants.SourceAsio">
+                                <td>@Model.Sources[Constants.SourceAsio]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileAsioChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileAsioRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileAsioRunId, new SelectList(Model.CreateFlatFileAsioRunIds, "Key", "Value", Model.CreateFlatFileAsioRunId))                              
+                                </td>
+                            </tr>
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceAsli" class="source-@Constants.SourceAsli">
+                                <td>@Model.Sources[Constants.SourceAsli]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileAsliChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileAsliRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileAsliRunId, new SelectList(Model.CreateFlatFileAsliRunIds, "Key", "Value", Model.CreateFlatFileAsliRunId))                              
+                                </td>
+                            </tr>
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceIc" class="source-@Constants.SourceIc">
+                                <td>@Model.Sources[Constants.SourceIc]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileIcChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileIcRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileIcRunId, new SelectList(Model.CreateFlatFileIcRunIds, "Key", "Value", Model.CreateFlatFileIcRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceIfl" class="source-@Constants.SourceIfl">
+                                <td>@Model.Sources[Constants.SourceIfl]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileIflChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileIflRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileIflRunId, new SelectList(Model.CreateFlatFileIflRunIds, "Key", "Value", Model.CreateFlatFileIflRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceLmp" class="source-@Constants.SourceLmp">
+                                <td>@Model.Sources[Constants.SourceLmp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileLmpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileLmpRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileLmpRunId, new SelectList(Model.CreateFlatFileLmpRunIds, "Key", "Value", Model.CreateFlatFileLmpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceSri" class="source-@Constants.SourceSri">
+                                <td>@Model.Sources[Constants.SourceSri]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileSriChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileSriRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileSriRunId, new SelectList(Model.CreateFlatFileSriRunIds, "Key", "Value", Model.CreateFlatFileSriRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionCreateFlatFile-@Constants.SourceDirectGermany" class="source-@Constants.SourceDirectGermany">
+                                <td>@Model.Sources[Constants.SourceDirectGermany]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.CreateFlatFileDirectGermanyChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.CreateFlatFileDirectGermanyRunId)">
+                                    @Html.DropDownListFor(m => m.CreateFlatFileDirectGermanyRunId, new SelectList(Model.CreateFlatFileDirectGermanyRunIds, "Key", "Value", Model.CreateFlatFileDirectGermanyRunId))                              
+                                </td>
+                            </tr> 
+                        </tbody>
+                    </table>  
+                </div>   
+            </div>
+        </div>
+        
+        <div id="esg-section" class="next-card section-wrapper">      
+            <div class="section-heading">
+                <h2>ESG</h2>
+                <svg id="esg-dropdown" class="next-icon section-dropdown-icon up" viewBox="0 0 24 24">
+                    <path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/>
+                </svg>
+            </div>    
+            <div class="sub-section-wrapper">                    
+                <div class="section-options">                    
+                    <div class="next-select__wrapper">
+                        @Html.DropDownListFor(m => m.EsgOptionId, new SelectList(Model.EsgOptions, "Key", "Value", Model.EsgOptionId), null, new { @class = "next-select" })
+                        <br />
+                        @Html.ValidationMessageFor(m => m.EsgOptionId, null, new { @class = "validation-message", style = "display:none;color:red;font-size:smaller;" })                
+                        <svg class="next-icon" viewBox="0 0 24 24"><path d="M21 5.176l-9.086 9.353-8.914-9.353-2.314 2.471 11.314 11.735 11.314-11.735-2.314-2.471z"/></svg>
+                    </div> 
+                </div>
+            
+                <!-- IMPORT ESG Data -->
+                <div class="sub-section">
+                    <h4 class="action-headers">Import ESG Data</h4>
+                    @Html.Raw(Constants.RunGroupTableEmpty)
+                    <table id="@Constants.ActionImportEsgData" class="action-tables">
+                        <thead class="styled-header">
+                            <tr>
+                                <td class="th-source">ESG Type</td>
+                                <td class="th-add-new">New</td>
+                                <td class="run-id-type">Run ID</td>
+                            </tr>
+                        </thead>
+                        <tbody>      
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeSiiScrGbp" class="esg-@Constants.EsgTypeSiiScrGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiScrGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataSiiScrGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataSiiScrGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataSiiScrGbpRunId, new SelectList(Model.ImportEsgDataSiiScrGbpRunIds, "Key", "Value", Model.ImportEsgDataSiiScrGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeSiiScrEur" class="esg-@Constants.EsgTypeSiiScrEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiScrEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataSiiScrEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataSiiScrEurRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataSiiScrEurRunId, new SelectList(Model.ImportEsgDataSiiScrEurRunIds, "Key", "Value", Model.ImportEsgDataSiiScrEurRunId))                              
+                                </td>
+                            </tr>                 
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeIfrsBaseGbp" class="esg-@Constants.EsgTypeIfrsBaseGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsBaseGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataIfrsBaseGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataIfrsBaseGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataIfrsBaseGbpRunId, new SelectList(Model.ImportEsgDataIfrsBaseGbpRunIds, "Key", "Value", Model.ImportEsgDataIfrsBaseGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeIfrsBaseEur" class="esg-@Constants.EsgTypeIfrsBaseEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsBaseEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataIfrsBaseEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataIfrsBaseEurRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataIfrsBaseEurRunId, new SelectList(Model.ImportEsgDataIfrsBaseEurRunIds, "Key", "Value", Model.ImportEsgDataIfrsBaseEurRunId))                              
+                                </td>
+                            </tr> 
+                             
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeSiiBaseGbp" class="esg-@Constants.EsgTypeSiiBaseGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiBaseGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataSiiBaseGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataSiiBaseGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataSiiBaseGbpRunId, new SelectList(Model.ImportEsgDataSiiBaseGbpRunIds, "Key", "Value", Model.ImportEsgDataSiiBaseGbpRunId))                              
+                                </td>
+                            </tr>    
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeSiiBaseEur" class="esg-@Constants.EsgTypeSiiBaseEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiBaseEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataSiiBaseEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataSiiBaseEurRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataSiiBaseEurRunId, new SelectList(Model.ImportEsgDataSiiBaseEurRunIds, "Key", "Value", Model.ImportEsgDataSiiBaseEurRunId))                              
+                                </td>
+                            </tr>   
+                                                                                 
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeIfrsAttributionGbp" class="esg-@Constants.EsgTypeIfrsAttributionGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsAttributionGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataIfrsAttributionGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataIfrsAttributionGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataIfrsAttributionGbpRunId, new SelectList(Model.ImportEsgDataIfrsAttributionGbpRunIds, "Key", "Value", Model.ImportEsgDataIfrsAttributionGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeIfrsAttributionEur" class="esg-@Constants.EsgTypeIfrsAttributionEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsAttributionEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataIfrsAttributionEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataIfrsAttributionEurRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataIfrsAttributionEurRunId, new SelectList(Model.ImportEsgDataIfrsAttributionEurRunIds, "Key", "Value", Model.ImportEsgDataIfrsAttributionEurRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeSiiAttributionGbp" class="esg-@Constants.EsgTypeSiiAttributionGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiAttributionGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataSiiAttributionGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataSiiAttributionGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataSiiAttributionGbpRunId, new SelectList(Model.ImportEsgDataSiiAttributionGbpRunIds, "Key", "Value", Model.ImportEsgDataSiiAttributionGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionImportEsgData-@Constants.EsgTypeSiiAttributionEur" class="esg-@Constants.EsgTypeSiiAttributionEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiAttributionEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ImportEsgDataSiiAttributionEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ImportEsgDataSiiAttributionEurRunId)">
+                                    @Html.DropDownListFor(m => m.ImportEsgDataSiiAttributionEurRunId, new SelectList(Model.ImportEsgDataSiiAttributionEurRunIds, "Key", "Value", Model.ImportEsgDataSiiAttributionEurRunId))                              
+                                </td>
+                            </tr> 
+                        </tbody>
+                    </table>  
+                </div> 
+
+                <!-- PRODUCE ESG RETURNS -->
+                <div class="sub-section">
+                    <h4 class="action-headers">Produce ESG Returns</h4>
+                    @Html.Raw(Constants.RunGroupTableEmpty)
+                    <table id="@Constants.ActionProduceEsgReturns" class="action-tables">
+                        <thead class="styled-header">
+                            <tr>
+                                <td class="th-source">ESG Type</td>
+                                <td class="th-add-new">New</td>
+                                <td class="run-id-type">Run ID</td>
+                            </tr>
+                        </thead>
+                        <tbody>                                  
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeSiiScrGbp" class="esg-@Constants.EsgTypeSiiScrGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiScrGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsSiiScrGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsSiiScrGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsSiiScrGbpRunId, new SelectList(Model.ProduceEsgReturnsSiiScrGbpRunIds, "Key", "Value", Model.ProduceEsgReturnsSiiScrGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeSiiScrEur" class="esg-@Constants.EsgTypeSiiScrEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiScrEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsSiiScrEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsSiiScrEurRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsSiiScrEurRunId, new SelectList(Model.ProduceEsgReturnsSiiScrEurRunIds, "Key", "Value", Model.ProduceEsgReturnsSiiScrEurRunId))                              
+                                </td>
+                            </tr>                             
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeIfrsBaseGbp" class="esg-@Constants.EsgTypeIfrsBaseGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsBaseGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsIfrsBaseGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsIfrsBaseGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsIfrsBaseGbpRunId, new SelectList(Model.ProduceEsgReturnsIfrsBaseGbpRunIds, "Key", "Value", Model.ProduceEsgReturnsIfrsBaseGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeIfrsBaseEur" class="esg-@Constants.EsgTypeIfrsBaseEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsBaseEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsIfrsBaseEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsIfrsBaseEurRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsIfrsBaseEurRunId, new SelectList(Model.ProduceEsgReturnsIfrsBaseEurRunIds, "Key", "Value", Model.ProduceEsgReturnsIfrsBaseEurRunId))                              
+                                </td>
+                            </tr> 
+                            
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeSiiBaseGbp" class="esg-@Constants.EsgTypeSiiBaseGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiBaseGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsSiiBaseGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsSiiBaseGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsSiiBaseGbpRunId, new SelectList(Model.ProduceEsgReturnsSiiBaseGbpRunIds, "Key", "Value", Model.ProduceEsgReturnsSiiBaseGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeSiiBaseEur" class="esg-@Constants.EsgTypeSiiBaseEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiBaseEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsSiiBaseEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsSiiBaseEurRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsSiiBaseEurRunId, new SelectList(Model.ProduceEsgReturnsSiiBaseEurRunIds, "Key", "Value", Model.ProduceEsgReturnsSiiBaseEurRunId))                              
+                                </td>
+                            </tr>                             
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeIfrsAttributionGbp" class="esg-@Constants.EsgTypeIfrsAttributionGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsAttributionGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsIfrsAttributionGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsIfrsAttributionGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsIfrsAttributionGbpRunId, new SelectList(Model.ProduceEsgReturnsIfrsAttributionGbpRunIds, "Key", "Value", Model.ProduceEsgReturnsIfrsAttributionGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeIfrsAttributionEur" class="esg-@Constants.EsgTypeIfrsAttributionEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsAttributionEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsIfrsAttributionEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsIfrsAttributionEurRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsIfrsAttributionEurRunId, new SelectList(Model.ProduceEsgReturnsIfrsAttributionEurRunIds, "Key", "Value", Model.ProduceEsgReturnsIfrsAttributionEurRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeSiiAttributionGbp" class="esg-@Constants.EsgTypeSiiAttributionGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiAttributionGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsSiiAttributionGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsSiiAttributionGbpRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsSiiAttributionGbpRunId, new SelectList(Model.ProduceEsgReturnsSiiAttributionGbpRunIds, "Key", "Value", Model.ProduceEsgReturnsSiiAttributionGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionProduceEsgReturns-@Constants.EsgTypeSiiAttributionEur" class="esg-@Constants.EsgTypeSiiAttributionEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiAttributionEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.ProduceEsgReturnsSiiAttributionEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.ProduceEsgReturnsSiiAttributionEurRunId)">
+                                    @Html.DropDownListFor(m => m.ProduceEsgReturnsSiiAttributionEurRunId, new SelectList(Model.ProduceEsgReturnsSiiAttributionEurRunIds, "Key", "Value", Model.ProduceEsgReturnsSiiAttributionEurRunId))                              
+                                </td>
+                            </tr> 
+                        </tbody>
+                    </table> 
+                </div> 
+
+                <!-- GET VCF WEIGHTS -->
+                <div class="sub-section">
+                    <h4 class="action-headers">Get Vcf Weights</h4>
+                    @Html.Raw(Constants.RunGroupTableEmpty)
+                    <table id="@Constants.ActionGetVcfWeights" class="action-tables">
+                        <thead class="styled-header">
+                            <tr>
+                                <td class="th-source">ESG Type</td>
+                                <td class="th-add-new">New</td>
+                                <td class="run-id-type">Run ID</td>
+                            </tr>
+                        </thead>
+                        <tbody>                                  
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeSiiScrGbp" class="esg-@Constants.EsgTypeSiiScrGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiScrGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsSiiScrGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsSiiScrGbpRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsSiiScrGbpRunId, new SelectList(Model.GetVcfWeightsSiiScrGbpRunIds, "Key", "Value", Model.GetVcfWeightsSiiScrGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeSiiScrEur" class="esg-@Constants.EsgTypeSiiScrEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiScrEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsSiiScrEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsSiiScrEurRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsSiiScrEurRunId, new SelectList(Model.GetVcfWeightsSiiScrEurRunIds, "Key", "Value", Model.GetVcfWeightsSiiScrEurRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeIfrsBaseGbp" class="esg-@Constants.EsgTypeIfrsBaseGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsBaseGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsIfrsBaseGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsIfrsBaseGbpRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsIfrsBaseGbpRunId, new SelectList(Model.GetVcfWeightsIfrsBaseGbpRunIds, "Key", "Value", Model.GetVcfWeightsIfrsBaseGbpRunId))
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeIfrsBaseEur" class="esg-@Constants.EsgTypeIfrsBaseEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsBaseEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsIfrsBaseEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsIfrsBaseEurRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsIfrsBaseEurRunId, new SelectList(Model.GetVcfWeightsIfrsBaseEurRunIds, "Key", "Value", Model.GetVcfWeightsIfrsBaseEurRunId))                              
+                                </td>
+                            </tr> 
+                            
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeSiiBaseGbp" class="esg-@Constants.EsgTypeSiiBaseGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiBaseGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsSiiBaseGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsSiiBaseGbpRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsSiiBaseGbpRunId, new SelectList(Model.GetVcfWeightsSiiBaseGbpRunIds, "Key", "Value", Model.GetVcfWeightsSiiBaseGbpRunId))                              
+                                </td>
+                            </tr>                    
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeSiiBaseEur" class="esg-@Constants.EsgTypeSiiBaseEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiBaseEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsSiiBaseEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsSiiBaseEurRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsSiiBaseEurRunId, new SelectList(Model.GetVcfWeightsSiiBaseEurRunIds, "Key", "Value", Model.GetVcfWeightsSiiBaseEurRunId))                              
+                                </td>
+                            </tr>                             
+                            
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeIfrsAttributionGbp" class="esg-@Constants.EsgTypeIfrsAttributionGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsAttributionGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsIfrsAttributionGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsIfrsAttributionGbpRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsIfrsAttributionGbpRunId, new SelectList(Model.GetVcfWeightsIfrsAttributionGbpRunIds, "Key", "Value", Model.GetVcfWeightsIfrsAttributionGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeIfrsAttributionEur" class="esg-@Constants.EsgTypeIfrsAttributionEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeIfrsAttributionEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsIfrsAttributionEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsIfrsAttributionEurRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsIfrsAttributionEurRunId, new SelectList(Model.GetVcfWeightsIfrsAttributionEurRunIds, "Key", "Value", Model.GetVcfWeightsIfrsAttributionEurRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeSiiAttributionGbp" class="esg-@Constants.EsgTypeSiiAttributionGbp">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiAttributionGbp]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsSiiAttributionGbpChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsSiiAttributionGbpRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsSiiAttributionGbpRunId, new SelectList(Model.GetVcfWeightsSiiAttributionGbpRunIds, "Key", "Value", Model.GetVcfWeightsSiiAttributionGbpRunId))                              
+                                </td>
+                            </tr> 
+                            <tr id="@Constants.ActionGetVcfWeights-@Constants.EsgTypeSiiAttributionEur" class="esg-@Constants.EsgTypeSiiAttributionEur">
+                                <td>@Model.EsgTypes[Constants.EsgTypeSiiAttributionEur]</td>
+                                <td class="add-new-type">
+                                    @Html.CheckBoxFor(x => x.GetVcfWeightsSiiAttributionEurChecked, new { @class = "add-new" })
+                                </td> 
+                                <td class="run-id-type" data-val-run-id="@(Model.GetVcfWeightsSiiAttributionEurRunId)">
+                                    @Html.DropDownListFor(m => m.GetVcfWeightsSiiAttributionEurRunId, new SelectList(Model.GetVcfWeightsSiiAttributionEurRunIds, "Key", "Value", Model.GetVcfWeightsSiiAttributionEurRunId))                              
+                                </td>
+                            </tr> 
+                        </tbody>
+                    </table> 
+                </div> 
+            </div>
+        </div>     
+        
+        <div class="action-buttons buttons-wrapper" style="position:relative;">        
+            <a data-role="button" class="button" id="run-groups" title="Back to previous page ...">Back</a>
+            @if (atLeastOneActionType)
+            {
+                <a data-role="button" class="button" id="btn-complete" title="Add New..." style="float:right">Complete</a>
+            }
+            else
+            {
+                <a data-role="button" class="disabled-button" title="Not Authorized" style="float:right">Complete</a>
+            }
+        </div>
+    }
+</div>
+
+<!--JavaScript-->
+<script type="text/javascript">
+
+    $(function () {
+
+        // ------------------------- GLOBAL REFERENCES -----------------------------
+        // reference to form object
+        var form = $(".add-run-group-container").find("form");
+
+        // general
+        var runGroupName = form.find("#RunGroupName");
+        var runGroupDescription = form.find("#RunGroupDescription");
+        var actionType = form.find("#ActionTypeNameId");
+        var countryUnit = form.find("#CountryUnitId");
+        var valuationDate = form.find("#ValuationDate");
+        var runNow = form.find("#RunNow");
+        var originalProcessingDate = form.find("#OriginalProcessingDate");
+        var triggerTime = form.find("#TriggerTime");
+
+        // inputs
+        var allProducts = form.find("#products-table").find(".product-checks");
+        var checkedProducts = form.find('.product-checks:checkbox:checked');
+        var gbpProducts = form.find("#products-table").find("[data-val-currency='GBP']");
+        var eurProducts = form.find("#products-table").find("[data-val-currency='EUR']");
+        var allRunTypes = form.find("#run-types-table").find(".run-type-checks");
+        var checkedRunTypes = form.find("#run-types-table").find('.run-type-checks:checkbox:checked');
+
+        // configuration
+        var baseTemplate = form.find("#configuration-section").find("#ConfigMasterId");
+        var assumptionsConfigSetId = form.find("#configuration-section").find("#ConfigAssumptionsConfigSetId");
+        var esgConfigSetId = form.find("#configuration-section").find("#ConfigEsgConfigSetId");
+        var dataConfigSetId = form.find("#configuration-section").find("#ConfigDataConfigSetId");
+
+        // data and esg
+        var newCheckboxes = form.find(".add-new");
+        // each data-action-source
+        var allDataActionRows = form.find("#data-section .action-tables tbody tr");
+        // each esg-action-esg
+        var allEsgActionRows = form.find("#esg-section .action-tables tbody tr");
+
+        // data
+        var dataOptions = form.find("#DataOptionId");
+        var dataOptionUseBaseRunGroup = form.find("#DataOptionId option[value=1]");
+        var dataOptionUseOtherExistingData = form.find("#DataOptionId option[value=2]");
+        var dataOptionImportSomeFromSource = form.find("#DataOptionId option[value=3]");
+        var dataOptionImportAllFromSource = form.find("#DataOptionId option[value=4]");
+        var dataNewCheckboxes = form.find("#data-section").find(".add-new");
+        var dataRunIds = form.find("#data-section").find(".run-id-type").find("select");
+        var dataLoadIds = form.find("#data-section").find(".load-id-type").find("select");
+
+        // esg
+        var esgOptions = form.find("#EsgOptionId");
+        var esgOptionUseBaseRunGroup = form.find("#EsgOptionId option[value=1]");
+        var esgOptionUseOtherExistingData = form.find("#EsgOptionId option[value=2]");
+        var esgOptionImportSomeFromSource = form.find("#EsgOptionId option[value=3]");
+        var esgOptionImportAllFromSource = form.find("#EsgOptionId option[value=4]");
+        var esgNewCheckboxes = form.find("#esg-section").find(".add-new");
+        var countryUnitId = "@(Model.CountryUnits.Keys.FirstOrDefault())";
+        var esgRunIds = form.find("#esg-section").find(".run-id-type").find("select");
+
+        // Import Policy And Fund, Import VCF Data, Join Fund And Vcf Source, Create Flat File
+        var dataActions = [@string.Join(",", Model.SourceActions.Keys.ToList())];
+        // ImportEsgData, Produce ESG Returns, GetVcfWeights
+        var esgActions = [@string.Join(",", Model.EsgActions.Keys.ToList())];
+        // ASC, ASLI, ASIO, IFL, IC, LMP, Direct-Germany, SRI
+        var importPolicyAndFundSourceIds = [@string.Join(",", Model.Sources.Keys.ToList())];
+        // Analytics3, Analytics7
+        var importVcfDataIds = [@(Constants.SourceVcfPositions),@(Constants.SourceVcfPositionsAndPrice)];
+        // SII Base GBP, SII SCR GBP, IFRS Base GBP, IFRS Attribution GBP, SII Base EUR, SII SCR EUR, IFRS Base EUR, IFRS Attribution EUR, SII Attribution GBP, SII Attribution EUR
+        var esgTypeIds = [@string.Join(",", Model.EsgTypes.Keys.ToList())];
+        // IFRS - Attribution, SII - Attribution
+        var attributionRunTypes = [@string.Join(",", Model.AttributionRunTypes)];
+
+        // BUTTON PANEL
+        var completeButton = form.find("#btn-complete");
+        var backButton = form.find("#run-groups");
+
+
+        // --------------------------------- CONTAINERS ----------------------------------------                
+        // when user clicks arrow beside section title 
+        // NOTE: hasClass does not work on svg elements
+        form.find(".section-heading").on("click", function () {
+            var sectionDropDown = $(this).find(".section-dropdown-icon");
+            var classString = sectionDropDown.attr('class');
+            if (classString.indexOf(' up') !== -1) {
+                $(sectionDropDown).attr("class", classString.replace(" up", ""));
+            } else {
+                $(sectionDropDown).attr("class", classString + " up");
+            }
+            $(sectionDropDown).closest(".section-wrapper").find(".sub-section-wrapper").slideToggle(500);
+        });
+
+        // VALUATION DATE
+        // when valuation date changes, then change the RunIds and LoadIds of both Data and ESG (this handled by a seperate event handler)
+        valuationDate.on("change", function () {
+            // TODO put confirm poup to indicate that RunIds and LoadIds will change as a result
+            $.each(dataActions, function (index, actionId) {
+                var sourceIds = importPolicyAndFundSourceIds;
+                if (actionId == '@(Constants.ActionImportVcfData)')
+                sourceIds = importVcfDataIds;
+                getLoadIdsFor(actionId, sourceIds);
+                getRunIdsFor(actionId, sourceIds);
+            });
+            $.each(esgActions, function (index, actionId) {
+                getLoadIdsFor(actionId, esgTypeIds);
+                getRunIdsFor(actionId, esgTypeIds); //calls getAssociatedEsgTypes after the request finishes, which in turn calls validateSelectlist
+            });
+            getOpeningAttributionRunGroups();            
+        });
+
+        // RUN NOW
+        runNow.on("click", function () {
+            triggerTime.attr("disabled", $(this).is(":checked"));
+            originalProcessingDate.attr("disabled", $(this).is(":checked"));
+        });
+
+        // TRIGGER TIME
+        triggerTime.on("change", function () {
+            form.validate().element(triggerTime);
+        });
+
+        // ORIGINAL PROCESSING DATE
+        originalProcessingDate.datepicker({ minDate: new Date(), dateFormat: 'yy-mm-dd' });
+        originalProcessingDate.on("change", function () {
+            if (new Date($(this).val()).getDate() == new Date().getDate()) {
+                // if the time is not now
+                if (triggerTime.val() != "00:00") {
+                    // get current tim  e
+                    var date = new Date();
+                    var currentTime = ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2)
+                    // set new time
+                    date.setMinutes(date.getMinutes() + 15);
+                    var min = ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2)
+                    triggerTime.attr("min", min);
+                    if (triggerTime.val() <= min)
+                        triggerTime.val(min).change();
+                }
+            }
+            else {
+                triggerTime.attr("min", "00:00");
+            }
+            form.validate();
+        });
+
+
+        // -------------------------------------- INPUTS ------------------------------------
+
+        // PRODUCTS
+        // selecting all products checkbox
+        form.find("#All_Products").on("click", function () {
+            // this will trigger the next event handler 
+            allProducts.prop('checked', $(this).is(':checked'));
+            // if all checked then show all sources in Data section
+            if ($(this).is(':checked')) {
+                allDataActionRows.show();
+                // form validator
+                form.find("input[name=ProductName]").val("FILLED").change();
+            }
+            else { // if unchecked then hide all sources in Data section
+                allDataActionRows.hide();
+                // form validator
+                form.find("input[name=ProductName]").val("").change();
+            }
+            getAssociatedEsgTypes();
+            getOpeningAttributionRunGroups();
+            applyVcfActionRules();
+        });
+
+        // when user clicks a single product
+        allProducts.on("click", function () {
+            productClicked(true);
+        });
+
+        // RUN TYPES
+        // selecting all products checkbox
+        form.find("#All_RunTypes").on("click", function () {
+            // this will trigger the next event handler 
+            allRunTypes.prop('checked', $(this).is(':checked'));
+            // form validator (at least one has been selected)
+            if ($(this).is(':checked')) {
+                form.find("input[name=RunTypeName]").val("FILLED").change();
+            }
+            else {
+                form.find("input[name=RunTypeName]").val("").change();
+            }
+            runTypeClicked(true);
+        });
+        // when user clicks a single run type. Note this is also called from All_RunTypes event handler for each product
+        allRunTypes.on("click", function () {
+            runTypeClicked(true);
+        });
+
+        $("#btn-quickselect").off("click");
+        $("#btn-quickselect").click(function () {
+
+            var container = document.getElementById("quickSelectCheckboxes");
+            if (container.style.display == "none") {
+                container.style.display = "inline-block";
+            } else if (container.style.display == "inline-block") {
+                container.style.display = "none";
+            }
+        });
+        $("#quickSelectCheckboxes").off("click");
+        $("#quickSelectCheckboxes").on("click", function () {
+            quickSelectCurrency();
+        });
+
+        $('#products-table').dataTable({
+            "paging": false,
+            "searching": false,
+        });
+
+
+        // --------------------------------- CONFIGURATION -------------------------------                        
+        // ConfigMaster
+        baseTemplate.on("change", function () {
+            getSubConfigIds();
+        });
+
+
+        // -------------------------------------- DATA ------------------------------------
+        /* CHECKBOXES */
+        newCheckboxes.on("click", function () {
+            $(this).closest("tr").find(".run-id-type")
+                                 .find("select")
+                                 .prop('disabled', $(this).is(":checked"));
+            $(this).closest("tr").find(".load-id-type")
+                                 .find("select")
+                                 .prop('disabled', !$(this).is(":checked"));
+        });
+
+        /* DROP DOWNS */
+        dataOptions.on("change", function () {
+            var option = $(this).val();
+            var section = $(this).closest(".section-wrapper");
+            if (option == "@(Constants.UseBaseRunGroup)") {  // they dont need to change anything
+                dataActions.map(function (actions, index) {
+                    // fill in drop downs with the original values                    
+                    disableDataDropDownsForAction("data", actions);
+                    setToUnchecked("data", actions);
+                    disableCheckboxes("data", actions);
+                    useBaseRunGroupData();
+                });
+            } else if (option == "@(Constants.UseOtherExisting)") {
+                // Set drop down for Analytic 3 and 7 for action Import VCF 
+                dataActions.map(function (elem, index) {
+                    removeBaseRunGroupMessages();
+                    disableDataDropDownsForLoadId("data", elem);
+                    enableDataDropDownsForRunId("data", elem);
+                    setToUnchecked("data", elem);
+                    disableCheckboxes("data", elem);
+                    resetEmptyRunIds("data", elem);
+                });
+            } else if (option == "@(Constants.ImportSomeFromSource)") {
+                dataActions.map(function (elem, index) {
+                    enableDataDropDownsForAction("data", elem);
+                    enableCheckboxes("data", elem);
+                    setToUnchecked("data", elem);
+                    // add new boxes will be unchecked initially meaning LoadId is disabled
+                    disableDataDropDownsForLoadId("data", elem);
+                    resetEmptyRunIds("data", elem);
+                });
+            } else if (option == "@(Constants.ImportAllFromSource)") {  // they dont need to change anything
+                dataActions.map(function (elem, index) {
+                    disableDataDropDownsForAction("data", elem);
+                    enableDataDropDownsForLoadId("data", elem);
+                    setToChecked("data", elem);
+                    disableCheckboxes("data", elem);
+                });
+            }
+            checkRunIdsAreEmptyAndSetAddNew("#data-section");
+        });
+
+        esgOptions.on("change", function () {
+            var option = $(this).val();
+            var section = $(this).closest(".section-wrapper");
+            if (option == "@(Constants.UseBaseRunGroup)") {  // they dont need to change anything
+                esgActions.map(function (elem, index) {
+                    disableDataDropDownsForAction("esg", elem);
+                    setToUnchecked("esg", elem);
+                    disableCheckboxes("esg", elem);
+                    useBaseRunGroupEsg();
+                });
+            } else if (option == "@(Constants.UseOtherExisting)") {
+                // Set drop down for Analytic 3 and 7 for action Import VCF 
+                esgActions.map(function (elem, index) {
+                    enableDataDropDownsForAction("esg", elem);
+                    setToUnchecked("esg", elem);
+                    disableCheckboxes("esg", elem);
+                });
+            } else if (option == "@(Constants.ImportSomeFromSource)") {
+                esgActions.map(function (elem, index) {
+                    enableDataDropDownsForAction("esg", elem);
+                    enableCheckboxes("esg", elem);
+                    setToUnchecked("esg", elem);
+                });
+            } else if (option == "@(Constants.ImportAllFromSource)") {  // they dont need to change anything
+                esgActions.map(function (elem, index) {
+                    disableDataDropDownsForAction("esg", elem);
+                    enableDataDropDownsForLoadId("esg", elem);
+                    setToChecked("esg", elem);
+                    disableCheckboxes("esg", elem);
+                });
+            }
+            checkRunIdsAreEmptyAndSetAddNew("#esg-section");
+        });
+
+
+        //-------------------------------------------BUTTON PANEL----------------------------------
+        backButton.off("click");
+        backButton.click(function () {
+            var country = "Ireland";
+            window.location.href = '/RunGroup/RunGroup';
+        });
+        completeButton.off("click");
+        completeButton.click(function () {
+            form.find("#SelectedProducts").val(getSelectedProductIds()).change();
+            form.find("#SelectedRunTypes").val(getSelectedRunTypeIds()).change();
+            // enable checkboxes so server can see them
+            valuationDate.attr("disabled", false);
+            esgActions.map(function (elem, index) {
+                enableDataDropDownsForAction("esg", elem);
+                enableCheckboxes("esg", elem);
+            });
+            dataActions.map(function (elem, index) {
+                enableDataDropDownsForAction("data", elem);
+                enableCheckboxes("data", elem);
+            });
+            // check if an attribution run type is selected and if there is in fact an attribution run group available (and selected)
+            var hasAttributionError = $("#attribution-opening").is(':visible') && $("#attribution-error").is(':visible');
+            var validator = form.validate({
+                onfocusout: false,
+                invalidHandler: function (form, validator) {
+                    var errors = validator.numberOfInvalids();
+                    if (errors) {
+                        validator.errorList[0].element.focus();
+                    }
+                }
+            });
+            if (!hasAttributionError && form.valid()) {
+                form.submit();
+            } else {
+                // if we get here then form is invalid so disable the enabled checkboxes again                
+                @if (Model.BaseRunGroup != null)
+                {
+                    <text>valuationDate.attr("disabled", true);</text>
+                }                
+                
+                validator.focusInvalid();
+
+                if (hasAttributionError) {
+                    alert("No Opening Attribution Selected!");
+                } 
+
+                dataOptions.trigger("change");
+                esgOptions.trigger("change");
+            }
+        });
+
+
+        // ------------------------------------------------------------ INITIALIZE ---------------------------------------------------------
+        // hide all sections on page load
+        form.find(".sub-section-wrapper").hide();
+
+        form.find(".action-tables tbody tr").hide();
+        // hide all actions until arrow icon is clicked    
+        form.find("#actions").find(".next-icon").on("click", function () {
+            $(this).next(".action-tables").toggle();
+        });
+        // show general card
+        form.find("#general-card .section-dropdown-icon").trigger("click");
+
+        // if no base template exists then hide it
+        if ($('#ConfigMasterId option').length == 0) {
+            $('#ConfigMasterId').hide();
+        } else {
+            // trigger initial drop down displays for Data and Esg sections
+            form.find("#ConfigMasterId").trigger("change");
+        }
+
+        if (runNow.is(":checked")) {
+            originalProcessingDate.prop("disabled", true);
+            triggerTime.prop("disabled", true);
+        } else {
+            originalProcessingDate.trigger("change");
+        }
+
+        form.find(".must-add-new").tipsy({
+            gravity: 's',
+            html: true,
+            title: $(this).attr("title")
+        });
+
+        // sets up what data and esg actions are displayed based on what products and run types are selected
+        productClicked(true);
+        applyEsgActionRules(true);
+        dataOptions.trigger("change");
+        esgOptions.trigger("change");
+
+        //--------------------------------------------------------------- HELPER FUNCTIONS -------------------------------------------------------
+        function productClicked(makeAjaxCall) {
+            applyDataActionRules();
+            applyVcfActionRules();
+            if (makeAjaxCall)
+                getAssociatedEsgTypes();
+            getOpeningAttributionRunGroups();
+        }
+
+        function runTypeClicked(makeAjaxCall) {
+            applyEsgActionRules();
+            if (makeAjaxCall)
+                getAssociatedEsgTypes();
+            getOpeningAttributionRunGroups();
+        }
+
+        function applyDataActionRules() {
+            var checkedBoxes = $('.product-checks:checkbox:checked');
+            allDataActionRows.hide();
+            // if any boxes are checked, then show the associated rows
+            if (checkedBoxes.length > 0) {
+                $.each(checkedBoxes, function (index, checkbox) {
+                    var source = $(checkbox).attr("data-val-source");
+                    // if checked, then show rows for this source and currency in Data section
+                    form.find(".action-tables").find("tr.source-" + source).show();                    
+                });
+                // weve selected a product so we indicate to the form validator that its valid
+                form.find("input[name=ProductName]").val("FILLED").change();
+            } else {    // no boxes are checked, so hide them all
+                // form validator
+                form.find("input[name=ProductName]").val("").change();
+            }
+        }
+
+        // based on the run types selected
+        function applyEsgActionRules() {
+            var checkedBoxes = $('.run-type-checks:checkbox:checked');
+            // if no more products checked then indicate to form validator
+            if (form.find(".run-type-checks:checked").length == 0)
+                form.find("input[name=RunTypeName]").val("").change();
+            else
+                form.find("input[name=RunTypeName]").val("FILLED").change();
+            if (isAttributionRunTypeSelected()) {
+                form.find("#attribution-opening").show();
+                form.find("#attribution-opening").find("#AttributionOpeningId").attr("disabled", false);
+            } else {
+                form.find("#attribution-opening").hide();
+                form.find("#attribution-opening").find("#AttributionOpeningId").attr("disabled", true);
+            }
+        }
+
+        // based on the products selected, should we hide "Import VCF Data" and "Get VCF Weights"
+        function applyVcfActionRules() {
+            var checkedBoxes = $('.product-checks:checkbox:checked');
+            // IfVcf show VCF rows
+            // if there is any products checked AND one of those products has the associated Vcf, then show the VCF rows
+            if (checkedBoxes && (checkedBoxes.filter("input[data-val-if-vcf=true]").length > 0
+                              || checkedBoxes.filter("input[data-val-if-vcf-related=true]").length > 0)) {
+                form.find(".action-tables#@Constants.ActionImportVcfData tbody tr").show();
+                form.find(".action-tables#@Constants.ActionGetVcfWeights tbody").show();
+            } // else hide the VCF actions as this product was the last selected product that was IfVcf                
+            else {
+                form.find(".action-tables#@Constants.ActionImportVcfData tbody tr").hide();
+                form.find(".action-tables#@Constants.ActionGetVcfWeights tbody").hide();
+            }
+        }
+        
+        // returns product ids that have been selected
+        function getSelectedProductIds() {
+            var productIds = [];
+            var checkedProducts = form.find("#products-table").find('.product-checks:checkbox:checked');
+            $(checkedProducts).each(function () {
+                var productId = $(this).attr("id").split("-")[1];
+                productIds.push(parseInt(productId));
+            });
+            return productIds;
+        }
+
+        function getSelectedRunTypeIds() {
+            var runTypeIds = [];
+            var checkedRunTypes = form.find("#run-types-table").find('.run-type-checks:checkbox:checked');
+            $(checkedRunTypes).each(function () {
+                var runTypeId = parseInt($(this).attr("id").split("-")[1]);
+                runTypeIds.push(runTypeId);
+            });
+            return runTypeIds;
+        }
+
+        function resetEmptyRunIds(section, action) {
+            form.find("#" + section + "-section table#" + action + " .run-id-type")
+                .find("select")
+                .each(function (index, elem) {
+                    if ($(elem).find("select").val(0).length != 0) {
+                        $(elem).prop('disabled', 'disabled');
+                        // find associated checkbox and trigger checked  
+                        $(elem).closest("tr").find("input[type='checkbox']").trigger('click');
+                    }
+                });
+            return false;
+        }
+
+        // enable and disable the drop downs in a particular section 
+        function enableDataDropDownsForLoadId(section, action) {
+            form.find("#" + section + "-section table#" + action + " .load-id-type")
+                .find("select")
+                .prop('disabled', false);
+        }
+        function disableDataDropDownsForLoadId(section, action) {
+            form.find("#" + section + "-section table#" + action + " .load-id-type")
+                .find("select")
+                .prop('disabled', 'disabled');
+        }
+        function enableDataDropDownsForRunId(section, action) {
+            form.find("#" + section + "-section table#" + action + " .run-id-type")
+                .find("select")
+                .prop('disabled', false);
+        }
+        function disableDataDropDownsForRunId(section, action) {
+            form.find("#" + section + "-section table#" + action + " .run-id-type")
+                .find("select")
+                .prop('disabled', 'disabled');
+        }
+        // enable and disable all the drop downs in a particular section
+        function disableDataDropDownsForAction(section, action) {
+            form.find("#" + section + "-section table#" + action)
+                .find("select")
+                .prop('disabled', 'disabled');
+        }
+        function enableDataDropDownsForAction(section, action) {
+            form.find("#" + section + "-section table#" + action)
+                .find("select")
+                .prop('disabled', false);
+        }
+        // show Load Id drop down and hide Run Id drop down
+        function changeDataHeadingToLoadIdForAction(section, action) {
+            var targetTable = form.find("#" + section + "-section table#" + action);
+            //targetTable.find(".run-id-type").hide();
+            //targetTable.find(".load-id-type").show();
+        }
+        function enableDataHeadingForRunIdAndLoadIdForAction(section, action) {
+            var targetTable = form.find("#" + section + "-section table#" + action);
+            targetTable.find(".run-id-type").show();
+            targetTable.find(".load-id-type").show();
+        }
+        // checkboxes
+        function setToChecked(section, action) {
+            var targetTable = form.find("#" + section + "-section table#" + action);
+            targetTable.find("input[type='checkbox']").prop('checked', true);
+        }
+        function setToUnchecked(section, action) {
+            var targetTable = form.find("#" + section + "-section table#" + action);
+            targetTable.find("input[type='checkbox']").prop('checked', false);
+        }
+        function enableCheckboxes(section, action) {
+            var targetTable = form.find("#" + section + "-section table#" + action);
+            targetTable.find("input[type='checkbox']").prop('disabled', false);
+        }
+        function disableCheckboxes(section, action) {
+            var targetTable = form.find("#" + section + "-section table#" + action);
+            targetTable.find("input[type='checkbox']").prop('disabled', true);
+        }
+        // check if RunId is empty and set to AddNew if is empty
+        function addNewIfRunIdIsEmpty(targetRow) {
+            // if theres no RunIds, then set AddNew as checked
+            if (targetRow.find(".run-id-type").find("select option[value='0']").length > 0) {
+                targetRow.find("input[type='checkbox']").prop('checked', true);
+                targetRow.find("input[type='checkbox']").prop('disabled', true);
+                targetRow.find(".run-id-type").find("select").prop('disabled', true);
+                targetRow.find(".load-id-type").find("select").prop('disabled', false);
+            }
+        }
+
+        function checkRunIdsAreEmptyAndSetAddNew(section) {
+            $.each($(section).find("tbody tr"), function (index, elem) {
+                addNewIfRunIdIsEmpty($(this));
+            });
+        }
+
+        function validateSelectlists() {
+            var currentDataSelection = dataOptions.val();
+            var currentEsgSelection = esgOptions.val();
+            var tableDataIds = [
+                @Constants.ActionImportPolicyAndFundData,
+                @Constants.ActionImportVcfData,
+                @Constants.ActionJoinFundAndVcfSource,
+                @Constants.ActionCreateFlatFile
+            ];
+            selectlistSwitcher("DataOptionId", tableDataIds);
+
+            var tableEsgIds = [
+                @Constants.ActionImportEsgData,
+                @Constants.ActionProduceEsgReturns,
+                @Constants.ActionGetVcfWeights
+            ];
+            selectlistSwitcher("EsgOptionId", tableEsgIds);
+
+            if (currentDataSelection == 1)
+                dataOptions.val(currentDataSelection);
+            if (currentEsgSelection == 1)
+                esgOptions.val(currentEsgSelection);
+
+            var tableIds = tableDataIds.concat(tableEsgIds);
+            showHideTables(tableIds);
+        }
+
+        function selectlistSwitcher(selectlistId, tableIds) {
+            var all = true;
+            var none = true;
+            var some = false;
+            values = [];
+
+            tableIds.forEach(function (id) {
+                $("#" + id + ".action-tables tbody tr").each(function (i, row) {
+                    if (row.style.display != "none" && $(row).parent()[0].style.display != "none") {
+                        var optionvalue = $(row).find("td.run-id-type").find("select option:selected")[0].value;
+                        values.push($(row).find("td.run-id-type").find("select option:selected").val());
+                        if (optionvalue == 0 || optionvalue == "0") {
+                            all = false;
+                        } else {
+                            none = false;
+                        }
+                    }
+                });
+            });
+
+            var currentSelection = $("#" + selectlistId).val();
+
+            if (values.length != 0) {
+
+                if (!all && !none) { // some from source
+                    some = true;
+                    $("#" + selectlistId + " option").each(function () {
+                        if ($(this).val() == 2) {
+                            $(this).attr("disabled", "disabled");
+                        } else if ($(this).val() == 3 || $(this).val() == 4) {
+                            $(this).attr("disabled", false);
+                        }
+                    });
+                    if (currentSelection != 4)
+                        $("#" + selectlistId).val(3).change();
+                } else if (all) { // all options are available for use
+                    $("#" + selectlistId + " option").each(function () {
+                        if ($(this).val() == 2 || $(this).val() == 3 || $(this).val() == 4) {
+                            $(this).attr("disabled", false);
+                        }
+                    });
+                } else if (none) { //none
+                    $("#" + selectlistId + " option").each(function () {
+                        if ($(this).val() == 2 || $(this).val() == 3) {
+                            $(this).attr("disabled", "disabled");
+                        } else if ($(this).val() == 4) {
+                            $(this).attr("disabled", false);
+                        }
+                    });
+                    $("#" + selectlistId).val(4).change();
+                }
+            } else {
+                all = false;
+                none = false;
+                $("#" + selectlistId + " option").each(function () {
+                    if ($(this).val() == 2 || $(this).val() == 3) {
+                        $(this).attr("disabled", "disabled");
+                    } else if ($(this).val() == 4) {
+                        $(this).attr("disabled", false);
+                    }
+                });
+                $("#" + selectlistId).val(4).change();
+            }
+        }
+
+        function showHideTables(tableIds) {
+
+            tableIds.forEach(function (id) {
+                var noRows = true;
+                var noBody = true;
+                var hide = true;
+
+                var table = "#" + id + ".action-tables ";
+
+                $(table + "tbody tr").each(function (i, row) {
+                    if ($(row)[0].style.display != "none") noRows = false;
+                });
+                $(table + "tbody").each(function (i, tbody) {
+                    if ($(tbody)[0].style.display != "none") noBody = false;
+                });
+
+                if (noRows || noBody) {
+                    $(table).hide();
+                    $(table).siblings(".table-empty:first").show();
+                } else {
+                    $(table).show();
+                    $(table).siblings(".table-empty:first").hide();
+                }
+            });
+        }
+
+        function quickSelectCurrency() {
+            var eur = document.getElementById("EURCheckbox");
+            var gbp = document.getElementById("GBPCheckbox");
+
+            $('#products-table tr').each(function () {
+                var row = $(this);
+                var rowClass = $(this).attr("class");
+
+                if (rowClass != undefined) {
+                    if (rowClass == "products-wrapper odd" || rowClass == "products-wrapper even") {
+
+                        $(this).find('input').each(function () {
+                            if (eur.checked == true && $(this).attr("data-val-currency") == "EUR") {
+                                if ($(this)[0].checked == false) {
+                                    $(this).click();
+                                }
+                            }
+
+                            if (gbp.checked == true && $(this).attr("data-val-currency") == "GBP") {
+                                if ($(this)[0].checked == false) {
+                                    $(this).click();
+                                }
+                            }
+
+                            if (eur.checked == false && $(this).attr("data-val-currency") == "EUR") {
+                                if ($(this)[0].checked == true) {
+                                    $(this).click();
+                                }
+                            }
+
+                            if (gbp.checked == false && $(this).attr("data-val-currency") == "GBP") {
+                                if ($(this)[0].checked == true) {
+                                    $(this).click();
+                                }
+                            }
+                        });
+                    }
+                }
+            })
+        }
+
+        function isAttributionRunTypeSelected() {
+            var runTypeIds = getSelectedRunTypeIds();
+            var result = false;
+            $.each(runTypeIds, function (index, elem) {
+                if (attributionRunTypes.indexOf(elem) != -1)
+                    result = true;
+            });
+            return result;
+        }
+
+        function disableCompleteButton() {
+            completeButton.prop("disabled", true);
+        }
+
+        function enableCompleteButton() {
+            completeButton.prop("disabled", false);
+        }
+
+        function useBaseRunGroupData() {
+            // each run-id row has an attribute called "data-val-run-id" which holds the original base run group run id            
+            $.each($("#data-section tbody").find(".run-id-type"), function (index, runIdDropDown) {                
+                var runId = parseInt($(runIdDropDown).data("val-run-id"));
+                // if this value is greater then 0, then a run id exists
+                if (runId > 0) {
+                    $(runIdDropDown).find("select").val(runId);
+                } else { // if its equal to 0 then this action is set to AddNew as checked
+                    var enclosingRow = $(runIdDropDown).closest("tr");
+                    $(enclosingRow).find("input[type='checkbox']").prop('checked', true);
+                    $(enclosingRow).find("input[type='checkbox']").prop('disabled', true);
+                    $(runIdDropDown).find("select").prop('disabled', true);
+                    $(enclosingRow).find(".load-id-type").find("select").prop('disabled', false);
+                    // show info message indicating that we have to add new for affected actions
+                    @if (Model.BaseRunGroupId > 0)
+                    {
+                    <text>$(enclosingRow).find("input[type='checkbox']")
+                                         .closest("td")
+                                         .append("<img class='must-add-new' src='@Url.Content("~/Images/exclamation-mark.jpg")' title='This action does not exist on the base run group or was not completed and thus will import from source' />");
+                    </text>
+                    }
+                }
+            });
+        }
+
+        function useBaseRunGroupEsg() {
+            // each run-id row has an attribute called "data-val-run-id" which holds the original base run group run id            
+            $.each($("#esg-section tbody").find(".run-id-type"), function (index, runIdDropDown) {
+                var runId = parseInt($(runIdDropDown).data("val-run-id"));
+                // if this value is greater then 0, then a run id exists
+                if (runId > 0) {
+                    $(runIdDropDown).find("select").val(runId);
+                } else { // if its equal to 0 then this action is set to AddNew as checked
+                    var enclosingRow = $(runIdDropDown).closest("tr");
+                    $(enclosingRow).find("input[type='checkbox']").prop('checked', true);
+                    $(enclosingRow).find("input[type='checkbox']").prop('disabled', true);
+                    $(runIdDropDown).find("select").prop('disabled', true);
+                    // show info message indicating that we have to add new for affected actions
+                    @if (Model.BaseRunGroupId > 0)
+                    {
+                    <text>$(enclosingRow).find("input[type='checkbox']")
+                                         .closest("td")
+                                         .append("<img class='must-add-new' src='@Url.Content("~/Images/exclamation-mark.jpg")' title='This action does not exist on the base run group or was not completed and thus will import from source' />");
+                    </text>
+                    }
+                }
+            });
+        }
+
+        function removeBaseRunGroupMessages()
+        {
+            form.find(".must-add-new").remove();
+        }
+
+
+        /* --------------------------------------------------- AJAX FUNCTIONS ---------------------------------------------------- */
+        // this will show and hide the esg functions
+        function getAssociatedEsgTypes() {
+            var productIds = getSelectedProductIds();
+            var runTypeIds = getSelectedRunTypeIds();
+            // hide rows before we make the request
+            if (productIds.length > 0 && runTypeIds.length > 0) {
+                disableCompleteButton();
+                $.ajax({
+                    type: 'POST',
+                    url: "/RunGroup/GetEsgTypes",
+                    data: JSON.stringify({
+                        esgConfigSetId: esgConfigSetId.val(), // gloablly defined
+                        countryUnitId: countryUnitId,   // globally defined
+                        productIds: productIds,
+                        runTypeIds: runTypeIds
+                    }),
+                    dataType: "json",
+                    contentType: 'application/json',
+                }).done(function (data) {
+                    if (data.any) {
+                        // hide all rows for Esg then show the associated ones
+                        allEsgActionRows.hide();
+                        var esgTypeIds = JSON.parse(data.result);
+                        $.each(esgTypeIds, function (key, value) {
+                            form.find(".esg-" + value).show();
+                        });
+                    }
+                }).fail(function (data) {
+                    console.log("Error");
+                }).then(function (data) {
+                    validateSelectlists();
+                }).always(function (data) {
+                    enableCompleteButton();
+                });
+            } else {
+                allEsgActionRows.hide();
+                validateSelectlists();
+            }
+        }
+
+        function getOpeningAttributionRunGroups() {
+            var productIds = getSelectedProductIds();
+            disableCompleteButton();
+            if (productIds.length > 0) {
+                $.ajax({
+                    type: 'POST',
+                    url: "/RunGroup/GetOpeningAttributionRunGroups",
+                    data: JSON.stringify({
+                        'valuationDate': valuationDate.val(),
+                        'productIds': productIds
+                    }),
+                    cache: false,
+                    dataType: "json",
+                    contentType: 'application/json',
+                }).done(function (data) {
+                    if (data.any) {
+                        form.find("#attribution-error").hide();
+                        form.find("#attribution-list").show();
+                        // serialize the json result into an array
+                        var dropDownDict = JSON.parse(data.result);
+                        // clear the current drop down content                
+                        var dropDownElement = form.find("#AttributionOpeningId");
+                        dropDownElement.empty();
+                        // append the returned values to the associated drop down list                    
+                        $.each(dropDownDict, function (key, value) {
+                            dropDownElement.append(
+                                $('<option>', {
+                                    value: key,
+                                    text: value
+                                }, '</option>'
+                            ));
+                        });
+                        @if (Model.AttributionOpeningId.HasValue)
+                        {
+                            <text>dropDownElement.val(@(Model.AttributionOpeningId.Value))</text>
+                        }
+                    }
+                    else {
+                        // hide select list and show error message
+                        form.find("#attribution-error").show();
+                        form.find("#attribution-list").hide();
+                    }
+                }).fail(function (data) {
+                    console.log("Error");
+                }).always(function (data) {
+                    enableCompleteButton();
+                    esgOptions.trigger("change");
+                    dataOptions.trigger("change");
+                });
+            } else {
+                // hide select list and show error message
+                form.find("#attribution-error").show();
+                form.find("#attribution-list").hide();
+            }
+        }
+
+        // BaseTemplate (ConfigMasterId changes)
+        function getSubConfigIds() {
+            var configMasterId = baseTemplate.val();
+            disableCompleteButton();
+            $.ajax({
+                type: 'POST',
+                url: "/RunGroup/GetSubConfigIds",
+                data: { 'configMasterId': configMasterId },
+                cache: false,
+            }).done(function (data) {
+                // deserialize the json result into object
+                // iterate and set sub config drop downs
+                var dropDownDict = JSON.parse(data);
+                $.each(dropDownDict, function (key, value) {
+                    if (key == '@(Constants.ConfigFileTypeAssumptions)') {
+                        assumptionsConfigSetId.val(value).change();
+                    } else if (key == '@(Constants.ConfigFileTypeEsg)') {
+                        esgConfigSetId.val(value).change();
+                    } else if (key == '@(Constants.ConfigFileTypeData)') {
+                        dataConfigSetId.val(value).change();
+                    }
+                });
+            }).fail(function (data) {
+                console.log("Error getting sub config set ids");
+            }).always(function (data) {
+                enableCompleteButton();
+            });
+    }
+
+        function getLoadIdsFor(actionId, sourceIds) {
+            $(sourceIds).each(function (index, sourceId) {
+                $.ajax({
+                    type: 'POST',
+                    url: "/RunGroup/GetSourceLoadIdsFor",
+                    data: {
+                        'valuationDate': valuationDate.val(),
+                        'actionId': actionId,
+                        'sourceId': sourceId
+                    },
+                    cache: false,
+                }).done(function (data) {
+                    // serialize the json result into an array
+                    var dropDownDict = JSON.parse(data);
+                    // clear the current drop down content
+                    var targetRow = form.find("tr#" + actionId + "-" + sourceId);
+                    var dropDownElement = targetRow.find(".load-id-type").find("select");
+                    dropDownElement.empty();
+                    // append the returned values to the associated drop down list                    
+                    $.each(dropDownDict, function (key, value) {
+                        dropDownElement.append(
+                            $('<option>', {
+                                value: key,
+                                text: value
+                            }, '</option>'
+                        ));
+                    });
+                }).fail(function (data) {
+                    console.log("Error");
+                });
+            });
+        }
+
+        function getRunIdsFor(actionId, sourceIds) {
+            var promises = [];
+            // does sourceIds refer to Source or ESGType
+            var isSourceBased = dataActions.indexOf(actionId) != -1;
+            $(sourceIds).each(function (index, sourceId) {
+                var request = $.ajax({
+                    type: 'POST',
+                    url: "/RunGroup/GetRunIdsFor",
+                    data: {
+                        'valuationDate': valuationDate.val(),
+                        'actionId': actionId,
+                        'sourceId': isSourceBased ? sourceId : null,
+                        'esgTypeId': isSourceBased ? null : sourceId
+                    },
+                    cache: false,
+                }).done(function (data) {
+                    // serialize the json result into an array
+                    var dropDownDict = JSON.parse(data);
+                    // clear the current drop down content
+                    var targetRow = form.find("tr#" + actionId + "-" + sourceId);
+                    var dropDownElement = targetRow.find(".run-id-type").find("select");
+                    dropDownElement.empty();
+                    // append the returned values to the associated drop down list
+                    $.each(dropDownDict, function (key, value) {
+                        dropDownElement.append(
+                            $('<option>', {
+                                value: key,
+                                text: value
+                            }, '</option>'));
+                    });
+                }).fail(function (data) {
+                    console.log("Error");
+                });
+                promises.push(request);
+            });
+            $.when.apply(null, promises).done(function () {
+                if (jQuery.inArray(actionId, dataActions) !== -1)
+                    form.find("#DataOptionId").trigger("change");
+                else if (jQuery.inArray(actionId, esgActions) !== -1)
+                    form.find("#EsgOptionId").trigger("change");
+
+                getAssociatedEsgTypes();
+            })
+        }
+    });
+</script>

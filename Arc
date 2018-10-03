@@ -1,0 +1,639 @@
+
+/****** Object:  Table [ModelParam].[WithdrawalTransitionalProbabilities]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[WithdrawalTransitionalProbabilities]
+GO
+/****** Object:  Table [ModelParam].[WithdrawalRates]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[WithdrawalRates]
+GO
+/****** Object:  Table [ModelParam].[RunDefinition]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[RunDefinition]
+GO
+/****** Object:  Table [ModelParam].[PseudoRandomNumberSet]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[PseudoRandomNumberSet]
+GO
+/****** Object:  Table [ModelParam].[PolicyKFactorCohort]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[PolicyKFactorCohort]
+GO
+/****** Object:  Table [ModelParam].[MortalitySelectFactor]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[MortalitySelectFactor]
+GO
+/****** Object:  Table [ModelParam].[MortalityRates]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[MortalityRates]
+GO
+/****** Object:  Table [ModelParam].[MortalityAdjustmentFactor]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[MortalityAdjustmentFactor]
+GO
+/****** Object:  Table [ModelParam].[LapseRates]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[LapseRates]
+GO
+/****** Object:  Table [ModelParam].[KFactor]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[KFactor]
+GO
+/****** Object:  Table [ModelParam].[KernelConfig]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[KernelConfig]
+GO
+/****** Object:  Table [ModelParam].[Expenses]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[Expenses]
+GO
+/****** Object:  Table [ModelParam].[Economic]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[Economic]
+GO
+/****** Object:  Table [ModelParam].[DemographicSettings]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[DemographicSettings]
+GO
+/****** Object:  Table [ModelParam].[CalculationExecution]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[CalculationExecution]
+GO
+/****** Object:  Table [ModelParam].[Audit]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [ModelParam].[Audit]
+GO
+/****** Object:  Table [Config].[RunDefinition]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[RunDefinition]
+GO
+/****** Object:  Table [Config].[ProductConversion]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[ProductConversion]
+GO
+/****** Object:  Table [Config].[KFactor]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[KFactor]
+GO
+/****** Object:  Table [Config].[KernelConfig]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[KernelConfig]
+GO
+/****** Object:  Table [Config].[Expenses]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[Expenses]
+GO
+/****** Object:  Table [Config].[Economic]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[Economic]
+GO
+/****** Object:  Table [Config].[DemographicSettings]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[DemographicSettings]
+GO
+/****** Object:  Table [Config].[CalculationExecution]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[CalculationExecution]
+GO
+/****** Object:  Table [Config].[AssumptionsConfigSet]    Script Date: 03/10/2018 17:39:30 ******/
+DROP TABLE [Config].[AssumptionsConfigSet]
+GO
+/****** Object:  Table [Config].[AssumptionsConfigSet]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [Config].[AssumptionsConfigSet](
+	[AssumptionsConfigSetId] [int] NOT NULL,
+	[BaseAssumptionConfigSetId] [int] NOT NULL,
+	[ActionTypeId] [int] NOT NULL,
+	[Name] [varchar](50) NOT NULL,
+	[KernelConfigConfigSetId] [int] NOT NULL,
+	[CalculationExecutionConfigSetId] [int] NOT NULL,
+	[RunDefinitionConfigSetId] [int] NOT NULL,
+	[ExpensesConfigSetId] [int] NOT NULL,
+	[DemographicConfigSetId] [int] NOT NULL,
+	[EconomicConfigSetId] [int] NOT NULL,
+	[ModelConfigSetId] [int] NOT NULL,
+	[ModelPointConfigSetId] [int] NOT NULL,
+	[ManagementConfigSetId] [int] NULL,
+	[Description] [varchar](500) NOT NULL,
+	[AddedBy] [int] NOT NULL,
+	[DateAdded] [datetime] NOT NULL,
+	[CompletedBy] [int] NULL,
+	[DateCompleted] [datetime] NULL,
+	[IsComplete] [char](1) NOT NULL,
+	[KFactorConfigSetId] [int] NOT NULL,
+ CONSTRAINT [PK_Config_AssumptionsConfigSet] PRIMARY KEY CLUSTERED 
+(
+	[AssumptionsConfigSetId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [Config].[CalculationExecution]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [Config].[CalculationExecution](
+	[CalculationExecutionConfigSetId] [int] NOT NULL,
+	[ProductId] [int] NOT NULL,
+	[RunType] [int] NOT NULL,
+	[CalculationExecutionId] [int] NOT NULL,
+ CONSTRAINT [PK_Config_CalculationExecution] PRIMARY KEY CLUSTERED 
+(
+	[CalculationExecutionConfigSetId] ASC,
+	[ProductId] ASC,
+	[RunType] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [Config].[DemographicSettings]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [Config].[DemographicSettings](
+	[DemographicConfigSetId] [int] NOT NULL,
+	[ProductId] [int] NOT NULL,
+	[RunType] [int] NOT NULL,
+	[DemographicSettingsId] [int] NOT NULL,
+	[MortalityRatesFemaleId] [int] NOT NULL,
+	[MortalityRatesMaleId] [int] NOT NULL,
+	[MortalitySelectFactorMaleId] [int] NULL,
+	[MortalitySelectFactorFemaleId] [int] NULL,
+	[MortalityAdjustmentFactorMaleId] [int] NULL,
+	[MortalityAdjustmentFactorFemaleId] [int] NULL,
+	[LapseRatesId] [int] NOT NULL,
+	[WithdrawalRatesId] [int] NULL,
+	[WithdrawalProbabilityFalseToTrueId] [int] NULL,
+	[WithdrawalProbabilityTrueToFalseId] [int] NULL,
+	[DynamicWithdrawalPseudoRandomNumberSetId] [int] NULL,
+ CONSTRAINT [PK_Config_Demographic] PRIMARY KEY CLUSTERED 
+(
+	[DemographicConfigSetId] ASC,
+	[ProductId] ASC,
+	[RunType] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [Config].[Economic]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [Config].[Economic](
+	[EconomicConfigSetId] [int] NOT NULL,
+	[ProductId] [int] NOT NULL,
+	[RunType] [int] NOT NULL,
+	[EconomicId] [int] NOT NULL,
+ CONSTRAINT [PK_Config_Economic] PRIMARY KEY CLUSTERED 
+(
+	[EconomicConfigSetId] ASC,
+	[ProductId] ASC,
+	[RunType] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [Config].[Expenses]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [Config].[Expenses](
+	[ExpensesConfigSetId] [int] NOT NULL,
+	[ProductId] [int] NOT NULL,
+	[RunType] [int] NOT NULL,
+	[ExpensesId] [int] NOT NULL,
+ CONSTRAINT [PK_Config_Expenses] PRIMARY KEY CLUSTERED 
+(
+	[ExpensesConfigSetId] ASC,
+	[ProductId] ASC,
+	[RunType] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [Config].[KernelConfig]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [Config].[KernelConfig](
+	[KernelConfigConfigSetId] [int] NOT NULL,
+	[ProductId] [int] NOT NULL,
+	[RunType] [int] NOT NULL,
+	[KernelConfigId] [int] NOT NULL,
+ CONSTRAINT [PK_Config_KernelConfig] PRIMARY KEY CLUSTERED 
+(
+	[KernelConfigConfigSetId] ASC,
+	[ProductId] ASC,
+	[RunType] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [Config].[KFactor]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [Config].[KFactor](
+	[KFactorConfigSetId] [int] NOT NULL,
+	[ProductId] [int] NOT NULL,
+	[RunType] [int] NOT NULL,
+	[KFactorId] [int] NOT NULL,
+ CONSTRAINT [PK_Config_KFactor] PRIMARY KEY CLUSTERED 
+(
+	[KFactorConfigSetId] ASC,
+	[ProductId] ASC,
+	[RunType] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [Config].[ProductConversion]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [Config].[ProductConversion](
+	[ProductConversionConfigSetID] [int] NOT NULL,
+	[ProductType] [varchar](20) NOT NULL,
+	[RepriceVersion] [varchar](20) NOT NULL,
+	[ProductID] [int] NULL,
+ CONSTRAINT [pk_productconversion_Producttype] PRIMARY KEY CLUSTERED 
+(
+	[ProductConversionConfigSetID] ASC,
+	[ProductType] ASC,
+	[RepriceVersion] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [Config].[RunDefinition]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [Config].[RunDefinition](
+	[RunDefinitionConfigSetID] [int] NOT NULL,
+	[ProductID] [int] NOT NULL,
+	[RunType] [int] NOT NULL,
+	[RunDefinitionID] [int] NOT NULL
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [ModelParam].[Audit]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[Audit](
+	[FileId] [int] NOT NULL,
+	[FileName] [varchar](100) NOT NULL,
+	[FileType] [varchar](50) NOT NULL,
+	[AddedBy] [int] NOT NULL,
+	[AddedWhen] [datetime2](7) NOT NULL,
+	[HashCode] [int] NULL,
+ CONSTRAINT [PK_Audit] PRIMARY KEY CLUSTERED 
+(
+	[FileId] ASC,
+	[FileName] ASC,
+	[FileType] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[CalculationExecution]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING OFF
+GO
+CREATE TABLE [ModelParam].[CalculationExecution](
+	[CalculationExecutionId] [int] NOT NULL,
+	[CalculationStage] [varchar](50) NOT NULL,
+	[StepType] [varchar](100) NOT NULL,
+	[StepName] [varchar](100) NOT NULL,
+	[StepAlgorithm] [varchar](100) NOT NULL,
+	[OrderID] [int] NOT NULL
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[DemographicSettings]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[DemographicSettings](
+	[DemographicSettingsId] [int] NOT NULL,
+	[DynamicLapseIndicator] [int] NOT NULL,
+	[LapseShockFactor] [float] NOT NULL,
+	[DeathBenefitCashInFactor] [float] NOT NULL,
+	[MaxLapseRate] [float] NOT NULL,
+	[ProportionOfTables] [float] NOT NULL,
+	[MortalityTableType] [varchar](100) NOT NULL,
+	[MortalityTableMaleAgeOffset] [int] NOT NULL,
+	[MortalityTableFemaleAgeOffset] [int] NOT NULL,
+	[DynamicWithdrawalIndicator] [int] NOT NULL,
+	[DynamicWithdrawalPseudoRandomNumbersIndicator] [int] NOT NULL,
+	[DynamicWithdrawalRngFixedSeedEnabled] [int] NOT NULL,
+	[DynamicWithdrawalRngFixedSeed] [int] NOT NULL,
+ CONSTRAINT [PK_ModelParamDemographicSettings] PRIMARY KEY CLUSTERED 
+(
+	[DemographicSettingsId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[Economic]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [ModelParam].[Economic](
+	[EconomicId] [int] NOT NULL,
+	[IFRSCreditSpread] [float] NOT NULL,
+	[ESGInternalRandomNumberGeneratorFixedSeedEnabledIndicator] [int] NOT NULL,
+	[ESGInternalRandomNumberGeneratorFixedSeed] [int] NOT NULL,
+	[ESGInternalVolatility] [float] NOT NULL,
+	[SoniaRate] [float] NOT NULL,
+ CONSTRAINT [PK_Economic] PRIMARY KEY CLUSTERED 
+(
+	[EconomicId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [ModelParam].[Expenses]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[Expenses](
+	[ExpensesID] [int] NOT NULL,
+	[ExpenseType] [varchar](20) NOT NULL,
+	[Currency] [int] NOT NULL,
+	[InflationRate] [float] NOT NULL,
+	[InflationFrequency] [int] NOT NULL,
+	[Initial] [float] NOT NULL,
+	[InitialFrequency] [int] NOT NULL,
+	[Renewal] [float] NOT NULL,
+	[RenewalFrequency] [int] NOT NULL,
+ CONSTRAINT [PK_Expenses] PRIMARY KEY CLUSTERED 
+(
+	[ExpensesID] ASC,
+	[ExpenseType] ASC,
+	[Currency] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[KernelConfig]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[KernelConfig](
+	[KernelConfigID] [int] NOT NULL,
+	[NumberOfProcessors] [int] NOT NULL,
+	[PolicyBlockSize] [int] NOT NULL,
+	[ParallelSettingsCalculationMethod] [varchar](50) NOT NULL,
+	[RunInParallel] [varchar](1) NOT NULL,
+	[ParallelProcessingType] [varchar](20) NOT NULL,
+	[NumberOfSimulations] [int] NOT NULL,
+	[ProjectionDurationInMonths] [int] NOT NULL,
+	[StochasticRateAdjustmentFactor] [int] NOT NULL,
+	[ESGSource] [varchar](20) NOT NULL,
+	[ESGDatabaseServer] [varchar](30) NOT NULL,
+	[ESGXmlDirectory] [varchar](30) NOT NULL,
+	[ResultLevel] [varchar](100) NOT NULL,
+	[ResultSubLevel] [varchar](100) NOT NULL,
+	[ResultOutputTarget] [varchar](50) NOT NULL,
+	[ResultLevelDetailedPolicyGroupingProperty] [varchar](80) NOT NULL,
+	[ResultLevelDebugPolicyNumber] [varchar](100) NOT NULL,
+	[ResultLevelDebugSimulationNumber] [int] NOT NULL,
+	[ResultProjection] [varchar](50) NOT NULL,
+	[ResultSummaryOutputVariables] [varchar](max) NOT NULL,
+	[ResultDetailedOutputVariables] [varchar](max) NOT NULL,
+	[ResultDebugOutputVariables] [varchar](max) NOT NULL,
+	[RequiredPolicyDataVariables] [varchar](max) NOT NULL,
+	[RequiredAssetDataVariables] [varchar](max) NOT NULL,
+	[BenefitClaimScalar] [float] NULL,
+ CONSTRAINT [PK_ModelParam_KernelConfig] PRIMARY KEY CLUSTERED 
+(
+	[KernelConfigID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[KFactor]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[KFactor](
+	[RowId] [int] IDENTITY(1,1) NOT NULL,
+	[KFactorId] [int] NOT NULL,
+	[CohortCode] [varchar](100) NOT NULL,
+	[IfrsKFactor] [float] NOT NULL,
+	[IfrsKFactorSplit] [float] NOT NULL,
+	[IfrsKFactorAdjustment] [float] NOT NULL,
+	[IfrsPvOfRevenueAdjustment] [float] NOT NULL,
+	[IfrsPvOfLivingBenefitAdjustment] [float] NOT NULL,
+ CONSTRAINT [PK_ModelParam.KFactor] PRIMARY KEY CLUSTERED 
+(
+	[RowId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[LapseRates]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [ModelParam].[LapseRates](
+	[LapseRatesId] [int] NOT NULL,
+	[InforceDurationMonths] [int] NULL,
+	[CurrentAge] [int] NULL,
+	[Value] [float] NOT NULL,
+	[RowID] [int] IDENTITY(1,1) NOT NULL,
+ CONSTRAINT [UC_ModelParam_LapseRates] UNIQUE CLUSTERED 
+(
+	[LapseRatesId] ASC,
+	[InforceDurationMonths] ASC,
+	[CurrentAge] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [ModelParam].[MortalityAdjustmentFactor]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [ModelParam].[MortalityAdjustmentFactor](
+	[RowId] [int] IDENTITY(1,1) NOT NULL,
+	[MortalityAdjustmentFactorId] [int] NOT NULL,
+	[Age] [int] NOT NULL,
+	[CurrentYear] [int] NULL,
+	[Value] [float] NOT NULL,
+ CONSTRAINT [UC_ModelParam_MortalityAdjustmentFactor] UNIQUE CLUSTERED 
+(
+	[MortalityAdjustmentFactorId] ASC,
+	[Age] ASC,
+	[CurrentYear] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [ModelParam].[MortalityRates]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [ModelParam].[MortalityRates](
+	[MortalityRatesId] [int] NOT NULL,
+	[CurrentAge] [int] NOT NULL,
+	[IssueAge] [int] NULL,
+	[Value] [float] NOT NULL,
+	[RowId] [int] IDENTITY(1,1) NOT NULL,
+ CONSTRAINT [UC_ModelParam_MortalityRates] UNIQUE CLUSTERED 
+(
+	[MortalityRatesId] ASC,
+	[CurrentAge] ASC,
+	[IssueAge] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [ModelParam].[MortalitySelectFactor]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [ModelParam].[MortalitySelectFactor](
+	[RowId] [int] IDENTITY(1,1) NOT NULL,
+	[MortalitySelectFactorId] [int] NOT NULL,
+	[PolicyYear] [int] NOT NULL,
+	[Value] [float] NOT NULL,
+ CONSTRAINT [UC_ModelParam_MortalitySelectFactor] UNIQUE CLUSTERED 
+(
+	[MortalitySelectFactorId] ASC,
+	[PolicyYear] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [ModelParam].[PolicyKFactorCohort]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[PolicyKFactorCohort](
+	[PolicyNumber] [varchar](200) NOT NULL,
+	[KFactorCohort] [varchar](200) NOT NULL,
+ CONSTRAINT [PK_ModelParam_PolicyKFactorCohort] PRIMARY KEY CLUSTERED 
+(
+	[PolicyNumber] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[PseudoRandomNumberSet]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [ModelParam].[PseudoRandomNumberSet](
+	[RowId] [int] IDENTITY(1,1) NOT NULL,
+	[PseudoRandomNumberSetId] [int] NOT NULL,
+	[Value] [float] NULL,
+ CONSTRAINT [PK_ModelParamPseudoRandomNumberSet] PRIMARY KEY CLUSTERED 
+(
+	[RowId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [ModelParam].[RunDefinition]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[RunDefinition](
+	[RowId] [int] IDENTITY(1,1) NOT NULL,
+	[RunDefinitionId] [int] NOT NULL,
+	[RunName] [varchar](100) NOT NULL,
+	[SubRun] [varchar](100) NOT NULL,
+	[SetUpFunctionName] [varchar](max) NULL,
+	[Param1] [varchar](max) NULL,
+	[Param2] [varchar](max) NULL,
+	[Param3] [varchar](max) NULL,
+	[Param4] [varchar](max) NULL,
+	[Param5] [varchar](max) NULL,
+	[Param6] [varchar](max) NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[WithdrawalRates]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [ModelParam].[WithdrawalRates](
+	[WithdrawalRatesId] [int] NOT NULL,
+	[RateCode] [varchar](20) NOT NULL,
+	[CurrentAge] [int] NOT NULL,
+	[Value] [float] NOT NULL,
+ CONSTRAINT [pk_ModelParam_WithdrawalRates] PRIMARY KEY CLUSTERED 
+(
+	[WithdrawalRatesId] ASC,
+	[RateCode] ASC,
+	[CurrentAge] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [ModelParam].[WithdrawalTransitionalProbabilities]    Script Date: 03/10/2018 17:39:30 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [ModelParam].[WithdrawalTransitionalProbabilities](
+	[WithdrawalTransitionalProbabilitiesId] [int] NOT NULL,
+	[RowIndex] [int] NOT NULL,
+	[ColumnIndex] [int] NULL,
+	[Value] [float] NOT NULL,
+ CONSTRAINT [UC_ModelParam_WithdrawalTransitionalProbabilities] UNIQUE CLUSTERED 
+(
+	[WithdrawalTransitionalProbabilitiesId] ASC,
+	[RowIndex] ASC,
+	[ColumnIndex] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]

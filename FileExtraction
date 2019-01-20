@@ -1,0 +1,40 @@
+using ArcsimPlatform.Repository;
+using System.IO;
+using System.Xml.Linq;
+
+namespace Application.Arcsim.Infrastructure
+{
+    public class XmlFileExtraction
+    {
+        private readonly ArcSimDbContext _arcSimDbContext;
+        public XmlFileExtraction(ArcSimDbContext arcSimDbContext)
+        {
+            _arcSimDbContext = arcSimDbContext;
+        }
+
+        public void ReadInputFile(int modelParamInputId)
+        {
+            var fileData = _arcSimDbContext.ModelParamInput.Find(modelParamInputId);
+            var xmlFile = XDocument.Parse(fileData.Blob);
+            // save file to location
+        }
+    }
+
+    public class CsvFileExtraction
+    {
+        private readonly ArcSimDbContext _arcSimDbContext;
+        public CsvFileExtraction(ArcSimDbContext arcSimDbContext)
+        {
+            _arcSimDbContext = arcSimDbContext;
+        }
+
+        public void ReadInputFile(int modelParamInputId)
+        {
+            var fileData = _arcSimDbContext.ModelParamInput.Find(modelParamInputId);
+            using (MemoryStream ms = new MemoryStream(System.Text.Encoding.ASCII.GetBytes(fileData.Blob)))
+            {
+                // save file to location
+            }
+        }
+    }
+}

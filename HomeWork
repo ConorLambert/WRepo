@@ -1,0 +1,37 @@
+using ArcsimPlatform.Repository;
+using ComponentModels.Entities.ArcSim;
+using System.IO;
+
+namespace Application.Arcsim.Infrastructure
+{
+    public interface IFilePersistence<T>
+    {
+        void SaveFile(T file);
+    }
+
+    public class FilePersistence : IFilePersistence<FileStream>
+    { 
+        private readonly ArcSimDbContext _arcSimDbContext;
+        public FilePersistence(ArcSimDbContext arcSimDbContext)
+        {
+            _arcSimDbContext = arcSimDbContext;
+        }
+
+        public void SaveFile(FileStream file)
+        {
+            using (StreamReader sr = new StreamReader(file))
+            {
+                _arcSimDbContext.ModelParamInput.Add
+                (
+                    new ModelParamInput
+                    {
+                        ModelParamId = 11111,
+                        BlobType = Path.GetExtension(file.Name),
+                        Blob = sr.ReadToEnd()
+                    }
+                );
+                _arcSimDbContext.SaveChanges();
+            }
+        }
+    }
+}

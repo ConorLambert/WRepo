@@ -1,0 +1,79 @@
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'my-app',
+  templateUrl: './configuration-alv.component.html',
+  styleUrls: ['./configuration-alv.component.css']
+})
+export class ConfigurationAlvComponent  {
+
+}
+
+
+
+ <mat-card>
+  <nav class="header">
+    <span class="data-set-name child">Demo</span>
+    <button mat-icon-button class="child">
+      <mat-icon aria-label="Expand All">add_circle</mat-icon>
+    </button>
+    <button mat-icon-button class="child">
+      <mat-icon aria-label="Collapse All">remove_circle_outline</mat-icon>
+    </button>
+    <button mat-icon-button [matMenuTriggerFor]="menu">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item>
+        <span>Export JSON</span>
+      </button>
+      <button mat-menu-item disabled>
+        <span>Import JSON</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item>
+        <span>Disable alerts</span>
+      </button>
+    </mat-menu>
+  </nav>
+  <main>
+    
+  </main>
+</mat-card>
+
+
+
+mat-card {
+  padding:0px;
+}
+nav {
+  background-color: #f5f5f5;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 -1px 0 rgba(0,0,0,.12) inset;
+  color: rgba(0,0,0,.54);
+  display: block;
+  font-size: 14px;
+  height: 56px;
+  min-height: 56px;
+  overflow-y: hidden;
+  padding-left: 16px;
+  padding-right: 8px;
+  width:100%;
+}
+nav.header {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+header.child {
+  display: flex;
+  align-items: center;
+}
+.data-set-name {
+  flex-grow:1;
+}
+
+main {
+  background:white;
+  height:600px;
+}

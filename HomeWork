@@ -35,3 +35,69 @@ namespace Application.Arcsim.Infrastructure
         }
     }
 }
+
+
+
+
+Id	Name
+0	No Product
+1	UKIC
+2	UKIFL
+3	PhI
+4	PhII
+5	ASLI
+6	UKASIO
+7	ASLI2
+8	LMPGen1
+9	ASC
+10	LMPGen1Oddo
+11	ASI
+12	ASTIGLI
+13	LMPGen2
+14	LMPGen2Oddo
+15	ASLI3
+16	ASC-v3
+17	ASI-v3
+18	ASTIGLI-v3
+19	ASLI3VCF
+20	ASTIGLI-v3-VCF
+21	ASC-v3-VCF
+22	ASI-v3-VCF
+23	SRI
+24	ASK
+25	ASDR
+26	AVL
+27	D_HL_RENRP
+28	D_HL_RENSP
+29	DRENRP
+30	DRENSP
+31	D_HL_KAOTH
+32	DKAGRU
+33	DKAOTH
+34	DKAVBG
+35	P_BUN
+36	P_HL_BUN
+37	P_HL_Risk
+38	D_RISK
+39	D_RSV
+40	D_FRV
+41	D_HL_FRV
+42	D_HL_FRV97
+43	DFLV97
+44	ALV_Diff_Src
+45	ALV_Diff_Src2
+46	ALV-All-Products-Source1
+
+
+Id	Name
+0	No RunType
+1	IFRS - Base Reserve
+2	IFRS - Attribution
+3	SII - Base Reserve
+4	SII - SCR
+5	SII - Attribution
+6	SII - Sensitivities
+7	SII - Base Reserve
+8	SII - Sensitivities
+9	SII - SCR
+10	SII - Attribution

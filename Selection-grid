@@ -1,0 +1,165 @@
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'inputs-grid',
+  template: `
+    <ul class="row">
+      <li class="cell run-type" style="visibility:hidden;"></li>
+      <li class="cell heading" *ngFor="let product of products">
+        {{product.name}}
+      </li>
+    </ul>
+    <ul class="row" *ngFor="let runType of runTypes">
+      <li class="cell run-type heading" (click)="runTypeClicked(runType.id)">
+        {{runType.name}}
+      </li>
+      <li class="cell product"
+          *ngFor="let product of products"
+          (click)="productClicked(runType.id, product.id)">
+        {{product.name}}
+      </li>
+    </ul>
+  `,
+  styleUrls: ['./inputs-grid.component.css']
+})
+export class InputsGridComponent {
+
+  result: Selections = new Selections();
+
+  constructor() { }
+
+  productClicked(runTypeId: number, productId: number) {
+    console.log(runTypeId + "-" + productId);
+  }
+
+  runTypeClicked(runTypeId: number) {
+    // add/remove all products and the selected run type from FromGroup
+  }
+
+  products = [
+    // new Product(1,	'UKIC'),
+    // new Product(2,	'UKIFL'),
+    // new Product(3,	'PhI'),
+    // new Product(4,	'PhII'),
+    // new Product(5,	'ASLI'),
+    // new Product(6,	'UKASIO'),
+    // new Product(7,	'ASLI2'),
+    // new Product(8,	'LMPGen1'),
+    // new Product(9,	'ASC'),
+    // new Product(10,	'LMPGen1Oddo'),
+    // new Product(11,	'ASI'),
+    // new Product(12,	'ASTIGLI'),
+    // new Product(13,	'LMPGen2'),
+    // new Product(14,	'LMPGen2Oddo'),
+    // new Product(15,	'ASLI3'),
+    // new Product(16,	'ASC-v3'),
+    // new Product(17,	'ASI-v3'),
+    // new Product(18,	'ASTIGLI-v3'),
+    // new Product(19,	'ASLI3VCF'),
+    // new Product(20,	'ASTIGLI-v3-VCF'),
+    // new Product(21,	'ASC-v3-VCF'),
+    // new Product(22,	'ASI-v3-VCF'),
+    // new Product(23,	'SRI'),
+    // new Product(24,	'ASK'),
+    // new Product(25,	'ASDR'),
+    // new Product(26,	'AVL'),
+    new Product(27,	'D_HL_RENRP'),
+    new Product(28,	'D_HL_RENSP'),
+    new Product(29,	'DRENRP'),
+    new Product(30,	'DRENSP'),
+    new Product(31,	'D_HL_KAOTH'),
+    new Product(32,	'DKAGRU'),
+    new Product(33,	'DKAOTH'),
+    new Product(34,	'DKAVBG'),
+    new Product(35,	'P_BUN'),
+    new Product(36,	'P_HL_BUN'),
+    new Product(37,	'P_HL_Risk'),
+    new Product(38,	'D_RISK'),
+    new Product(39,	'D_RSV'),
+    new Product(40,	'D_FRV'),
+    new Product(41,	'D_HL_FRV'),
+    new Product(42,	'D_HL_FRV97'),
+    new Product(43,	'DFLV97'),
+    new Product(44,	'ALV_Diff_Src'),
+    new Product(45,	'ALV_Diff_Src2'),
+    new Product(46,	'ALV-All-Products-Source1'),
+  ];
+
+  runTypes = [
+    // new RunType(1, 'IFRS - Base Reserve'),
+    // new RunType(2, 'IFRS - Attribution'),
+    // new RunType(3, 'SII - Base Reserve'),
+    // new RunType(4, 'SII - SCR'),
+    // new RunType(5, 'SII - Attribution'),
+    // new RunType(6, 'SII - Sensitivities'),
+    new RunType(7, 'SII - Base Reserve'),
+    new RunType(8, 'SII - Sensitivities'),
+    new RunType(9, 'SII - SCR'),
+    new RunType(10, 'SII - Attribution')
+  ];
+}
+
+export class Product {
+    constructor(id: number, name: string) {
+      this.id = id;
+      this.name = name;
+    }
+
+    id: number;
+    name: string;
+}
+
+export class RunType {
+  constructor(id: number, name: string) {
+    this.id = id;
+    this.name = name;
+  }
+
+  id: number;
+  name: string;
+}
+
+export class Selections {
+  selectedProducts: number[];
+  selectedRunTypes: number[];
+}
+
+
+
+
+
+ul {
+    list-style:none;
+}
+
+ul.row {
+    white-space: nowrap;
+    margin:0;
+    cursor:pointer;
+}
+
+ul.row li {
+    background-color: white; 
+    transition: 1.2s;
+}
+
+ul.row .product:hover {
+    background-color: lightgrey; 
+    transition: 0.5s;
+}
+
+.item-selected {
+    background-color: yellow; 
+}
+
+.cell {
+    display:inline-block;
+    border: 1px solid black;
+    padding:20px;
+}
+.run-type {
+    width: 130px;
+}
+.row .heading {
+   background-color: lightblue; 
+}

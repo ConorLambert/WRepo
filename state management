@@ -1,0 +1,1329 @@
+import { State, Action, StateContext, Selector, Store, createSelector, Select } from '@ngxs/store';
+import { SelectedCells } from 'ClientApp/app/configurations/add-configuration/add-configuration-alv/inputs/inputs-grid/infrastructure/selected-cells.model';
+import { ConfigModelParamInputDto, KernelConfigAlvDto, InputsService, CreateKernelConfigAlvCommand } from 'ClientApp/core/services/api.client.generated';
+import { UpdateSelectedRows, AddSelectedRowsSet, DeleteSelectedRowsSet, ApplyChanges, CalculateCommonInputs } from 'ClientApp/app/_actions/configurations/add-configuration-alv/selection-info/selection-info.action';
+import { Observable } from 'rxjs';
+import { AddConfigurationAlvState } from '../add-configuration-alv.state';
+import { UpdateConfigSetEntries } from 'ClientApp/app/_actions/configurations/add-configuration-alv/add-configuration-alv.action';
+import { UpdateFormValue } from '@ngxs/form-plugin';
+import { NotificationService } from 'ClientApp/app/services/notification.service';
+import { GetKernelConfigAlv, CreateKernelConfigAlv } from 'ClientApp/app/_actions/configurations/add-configuration-alv/kernel-config-alv/kernel-config-alv.action';
+
+export class KernelConfigAlvStateModel {
+    form: {
+        model: KernelConfigAlvDto,
+        dirty: boolean,
+        status: string,
+        errors: {}
+    };
+    // array of arrays: array per common modelParamInputId : each element of a single array has the same modelParamId
+    //commonInputs: CommonInput[];
+}
+@State<KernelConfigAlvStateModel>({
+    name: 'kernelConfigAlv',
+    defaults: {
+        form: {
+            model: null,
+            dirty: false,
+            status: '',
+            errors: {}
+        }
+    }
+})
+export class KernelConfigAlvState {
+
+    constructor(private inputService: InputsService,
+        public notify: NotificationService,
+        private store: Store) { }
+    
+    // EXTERNAL
+    @Select(AddConfigurationAlvState.configSetEntries)
+    configSetEntries$: Observable<ConfigModelParamInputDto[]>;
+    
+    @Action(GetKernelConfigAlv)
+    getKernelConfigAlv(ctx: StateContext<KernelConfigAlvStateModel>, { modelParamId }: GetKernelConfigAlv) {
+        this.inputService
+            .getKernelConfigAlv(modelParamId)
+            .subscribe(
+                (result: KernelConfigAlvDto) => {
+                    this.updateKernelConfigAlvForm(result);
+                },
+                error => this.notify.showError(error.response, "Error Occured")
+            );
+    }
+
+    @Action(CreateKernelConfigAlv)
+    createKernelConfig(ctx: StateContext<KernelConfigAlvStateModel>, { inputName, inputData }: CreateKernelConfigAlv) {
+        let formData = new KernelConfigAlvDto(inputData);
+        let command = new CreateKernelConfigAlvCommand({name: inputName, inputData: formData});
+        this.inputService
+            .createKernelConfig(command)
+            .subscribe(
+                createdEntry => this.notify.showSuccess("Input added successfully !!", "Notification"),
+                error => this.notify.showError(error.response, "Error Occured")
+            ); 
+    }
+
+    updateKernelConfigAlvForm(value: KernelConfigAlvDto) {
+        this.store.dispatch(
+            new UpdateFormValue({
+                value,
+                path: 'kernelConfigAlv.form'
+            })
+        );
+    }
+}
+
+
+
+
+
+
+
+import { State, Action, StateContext, Selector, Store } from '@ngxs/store';
+import { CreateConfigurationAiCommand, InputsService, CreateConfigurationAiViewModel, CreateConfigurationAlvViewModel, InputFileDto, FileParameter, ConfigModelParamInputDto, CreateConfigurationAlvCommand, KernelConfigAlvViewModel, InputsViewModel } from 'ClientApp/core/services/api.client.generated';
+import { CreateConfiguration, GetCreateConfiguration, CreateSelection } from '../../../_actions/configurations/add-configuration-athora/add-configuration-athora.action';
+import { NotificationService } from 'ClientApp/app/services/notification.service';
+import { Router, ActivatedRoute } from '@angular/router';
+import { GetCreateConfigurationAlv, GetCommonInputFiles, AddFileToEntries, DeleteFileEntry, AddDroppedFilesToEntries, CreateInputFiles, GetInputFile, GetDuplicateFile, FileAlreadyExists, UpdateFile, ResetDialogFile, UndoDeletingFile, ReplaceWithDuplicateFile, CreateInputFile, ConvertOptionToInt, AddSelection, UpdateConfigSetEntries, UpdateSelectedCells, ResetFileEntries, RenameInputFile, DoesInputFileNameExist, DeleteDuplicateInputFiles, ResetSelectedCells, UpdateProductOrAssetGroup } from 'ClientApp/app/_actions/configurations/add-configuration-alv/add-configuration-alv.action';
+import { forkJoin } from 'rxjs';
+import { SelectedCells } from 'ClientApp/app/configurations/add-configuration/add-configuration-alv/inputs/inputs-grid/infrastructure/selected-cells.model';
+import { ApplyChanges } from 'ClientApp/app/_actions/configurations/add-configuration-alv/selection-info/selection-info.action';
+import { ModelParamTypes } from '../../../shared/constants';
+
+export class FileEntry {
+    constructor
+    (
+        name: string,
+        file: File,
+        modelParamId: number = 0,
+        isChecking: boolean = true,
+        isDuplicate: boolean = false,
+        isPersisted: boolean = false,
+        fileNameAlreadyExists: boolean = false,
+        inputNameId: number = 0,
+        fileAction: string = 'Create',
+        isValid: boolean = false,
+        isDeleted: boolean = false,
+        isAddition: boolean = true
+    )
+    {
+        this.name = name;
+        this.file = file;
+        this.modelParamId = modelParamId;
+        this.fileNameAlreadyExists = fileNameAlreadyExists;
+        this.isCheckingDuplicate = isChecking;
+        this.isDuplicate = isDuplicate;
+        this.isPersisted = isPersisted; // has is been saved (dropped files are always false)
+        this.inputNameId = inputNameId;
+        this.inputNameIdOption = inputNameId.toString(),
+        this.fileAction = fileAction;
+        this.isValid = isValid;
+        this.isDeleted = isDeleted;
+        this.isAddition = isAddition;
+    }
+
+    name: string;
+    file: File;
+    modelParamId: number;
+    isCheckingDuplicate: boolean;
+    isDuplicate: boolean;
+    isPersisted: boolean;
+    fileNameAlreadyExists: boolean;
+    inputNameId: number;
+    inputNameIdOption: string
+    fileAction: string;
+    isValid: boolean;
+    // used as an indicator on what the new config input set will look like
+    isDeleted: boolean;
+    isAddition: boolean
+    duplicateInputFile: InputFileDto;
+
+    //get inputNameIdA() {
+    //    return this.inputNameId.toString();
+    //}
+
+    set duplicateFile(inputFile: InputFileDto) {
+        this.duplicateInputFile = inputFile;
+    }
+
+    overwriteWithDuplicateFile() {
+        this.name = this.duplicateInputFile.fileName;
+        this.file = new File([this.duplicateInputFile.blob], this.name);
+        this.modelParamId = this.duplicateInputFile.modelParamId;
+        this.isCheckingDuplicate =  false;
+        this.fileNameAlreadyExists = false;
+        this.isDuplicate =  false;
+        this.isPersisted =  true;
+        //this.inputNameId =  this.duplicateInputFile.inputNameId;
+        this.fileAction =  '';
+        this.isValid =  true;
+        this.isDeleted =  false;
+        this.duplicateInputFile = null;
+    }
+
+    addInputFile(inputFile: InputFileDto): FileEntry {
+        let file = new File([inputFile.blob], inputFile.fileName);
+        let fileEntry = new FileEntry(file.name, file, inputFile.modelParamId);
+        fileEntry.isValid = true;
+        fileEntry.isCheckingDuplicate = false;
+        fileEntry.isPersisted = true;
+        //fileEntry.inputNameId = inputFile.inputNameId;
+        return fileEntry;
+    }
+
+    // this function is called everytime the selection changes for this file entry
+    // select list for input names requires a string as key, but submission requires an int
+    convertOptionToInt() {
+        this.inputNameId = parseInt(this.inputNameIdOption);
+    }
+
+    errorMessageAlreadyExistingData() {
+        return "This data already exists under the input file name '" + this.duplicateInputFile.fileName + "'";
+    }
+};
+
+
+export class AddConfigurationAlvStateModel {
+    formViewModel: CreateConfigurationAlvViewModel;
+    fileEntries: FileEntry[];
+    dialogFile: File;
+    isFormSubmitted: boolean;
+    selectedCells: SelectedCells[];
+    productOrAssetGroup: string;
+}
+@State<AddConfigurationAlvStateModel>({
+    name: 'addConfigurationAlv',
+    defaults: {
+        formViewModel: undefined,
+        fileEntries: [],
+        dialogFile: null,
+        isFormSubmitted: false,
+        selectedCells: [],
+        productOrAssetGroup: "product"
+    }
+})
+export class AddConfigurationAlvState {
+
+    constructor(
+        private inputService: InputsService,
+        private notify: NotificationService,
+        private router: Router,
+        private route: ActivatedRoute,
+        private store: Store) { }
+    
+    @Selector()
+    public static configSetEntries(state: AddConfigurationAlvStateModel) {
+        return state.formViewModel.inputsViewModel.configSetEntries;
+    }
+    
+    @Selector()
+    public static inputNames(state: AddConfigurationAlvStateModel) {
+        return state.formViewModel.inputsViewModel.inputNames;
+    }
+
+    @Selector()
+    public static inputFilesSelectList(state: AddConfigurationAlvStateModel) {
+        let inputFiles = state.formViewModel.inputsViewModel.inputFiles;
+        let result = AddConfigurationAlvState.convertToObject(state.formViewModel.inputsViewModel.inputFiles, 'modelParamId', 'fileName'); 
+        return result;
+    }
+    
+    @Selector()
+    public static products(state: AddConfigurationAlvStateModel) {
+        return state.formViewModel.products;
+    }
+
+    @Selector()
+    public static runTypes(state: AddConfigurationAlvStateModel) {
+        return state.formViewModel.runTypes;
+    }
+
+    @Selector()
+    public static assetGroups(state: AddConfigurationAlvStateModel) {
+        return state.formViewModel.assetGroups;
+    }
+
+    @Selector()
+    public static productsDisplay(state: AddConfigurationAlvStateModel) {
+        return AddConfigurationAlvState.convertToObject(state.formViewModel.products, 'id', 'name')
+    }
+
+    @Selector()
+    public static runTypesDisplay(state: AddConfigurationAlvStateModel) {
+        return AddConfigurationAlvState.convertToObject(state.formViewModel.runTypes, 'id', 'name');
+    }
+
+    @Selector()
+    public static assetGroupsDisplay(state: AddConfigurationAlvStateModel) {
+        return AddConfigurationAlvState.convertToObject(state.formViewModel.assetGroups, 'id', 'name');
+    }
+
+    @Selector()
+    public static kernelConfigAlvViewModel(state: AddConfigurationAlvStateModel): KernelConfigAlvViewModel {
+        return state.formViewModel.kernelConfigAlvViewModel;
+    }
+
+    @Selector()
+    public static kernelConfigAlvGlobalResultProjectionOutputMonths(state: AddConfigurationAlvStateModel): string[] {
+        return state.formViewModel.kernelConfigAlvViewModel.optionsGlobalResultProjectionOutputMonths;
+    }
+
+    @Selector()
+    public static kernelConfigAlvResultOutputVariables(state: AddConfigurationAlvStateModel): string[] {
+        return state.formViewModel.kernelConfigAlvViewModel.optionsResultOutputVariables;
+    }
+    
+    public static convertToObject(data, key, value) {
+        return data.reduce((obj, item) => {
+            obj[item[key]] = item[value];
+            return obj
+        }, {})
+    }
+
+    @Selector()
+    public static dialogFile(state: AddConfigurationAlvStateModel) {
+        return state.dialogFile;
+    }
+
+    @Selector()
+    public static fileEntries(state: AddConfigurationAlvStateModel) {
+        return state.fileEntries;
+    }
+
+    @Selector()
+    public static formSubmitted(state: AddConfigurationAlvStateModel) {
+        return state.isFormSubmitted;
+    }
+
+    @Selector()
+    public static selectedCells(state: AddConfigurationAlvStateModel) {
+        return state.selectedCells;
+    }
+
+    @Selector()
+    public static productOrAssetGroup(state: AddConfigurationAlvStateModel) {
+        return state.productOrAssetGroup;
+    }
+
+    @Action(CreateConfiguration)
+    createConfiguration(ctx: StateContext<AddConfigurationAlvStateModel>, { newConfigurationName }: CreateConfiguration) {
+        let state = ctx.getState();
+        let command = new CreateConfigurationAlvCommand();
+        command.runGroupId = this.runGroupId;
+        command.inputSetName = newConfigurationName;
+        // formulate the new config set entries 
+        command.configSetEntries = state.formViewModel
+            .inputsViewModel
+            .configSetEntries
+            .filter(x => x.modelParamId > 0 && !x.isDeleted);
+        this.inputService
+            .createConfigurationAlv(command)
+            .subscribe(
+                success => ctx.patchState({ isFormSubmitted: true }),
+                error => this.notify.showError("Error Occured","")
+            );
+    }
+    
+    @Action(GetDuplicateFile)
+    getDuplicateFile(ctx: StateContext<AddConfigurationAlvStateModel>, { fileEntryIndex }: GetDuplicateFile) {
+        let state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        let fileEntry = fileEntries[fileEntryIndex];
+        let formData = this.createFormData(fileEntry);
+        this.inputService
+            .getDuplicateFile(formData)
+            .subscribe(
+                duplicateInputFile => {
+                    fileEntry.isCheckingDuplicate = false;
+                    fileEntry.isDuplicate = true;
+                    //fileEntry.isPersisted = true;
+                    fileEntry.duplicateInputFile = duplicateInputFile;
+                    //fileEntries[fileEntryIndex] = fileEntry;
+                    ctx.patchState({
+                        fileEntries: [...fileEntries]
+                    });
+                },
+                error => {
+                    fileEntry.isCheckingDuplicate = false;
+                    fileEntry.isDuplicate = false;
+                    ctx.patchState({
+                        fileEntries: [...fileEntries]
+                    });
+                }
+            );
+    }
+
+    @Action(DoesInputFileNameExist)
+    doesInputFileNameExist(ctx: StateContext<AddConfigurationAlvStateModel>, { fileEntryIndex }: DoesInputFileNameExist) {
+        let state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        let fileEntry = fileEntries[fileEntryIndex];
+        let fileName = fileEntry.name;
+        this.inputService
+            .doesInputNameExist(ModelParamTypes.Input, fileName)
+            .subscribe(
+                duplicateInputFile => {
+                    fileEntry.fileNameAlreadyExists = true;
+                    fileEntry.isValid = false;
+                    ctx.patchState({
+                        fileEntries: [...fileEntries]
+                    });
+                },
+                error => {
+                    fileEntry.fileNameAlreadyExists = false;
+                    ctx.patchState({
+                        fileEntries: [...fileEntries]
+                    });
+                }
+            );
+    }
+
+    createFormData(fileEntry: FileEntry): FileParameter {
+        let formData = {} as FileParameter;
+        formData.fileName = fileEntry.name;
+        formData.data = fileEntry.file;
+        return formData;
+    }
+
+    @Action(GetCreateConfigurationAlv)
+    getCreateConfigurationAlv(ctx: StateContext<AddConfigurationAlvStateModel>) {
+        this.inputService
+            .getCreateConfigurationAlv(this.runGroupId)
+            .subscribe((result: CreateConfigurationAlvViewModel) => {
+                const state = ctx.getState();
+                ctx.patchState({
+                    formViewModel: result
+                });
+            });
+    }
+
+    @Action(GetInputFile)
+    getInputFile(ctx: StateContext<AddConfigurationAlvStateModel>, { modelParamId }: GetInputFile) {
+        this.inputService
+            .getInputFile(modelParamId)
+            .subscribe(result => {
+                const state = ctx.getState();
+                state.dialogFile = new File([result.blob], result.fileName);
+                ctx.patchState(state);
+            });
+    }
+
+    @Action(GetCommonInputFiles)
+    getCommonInputFiles(ctx: StateContext<AddConfigurationAlvStateModel>, { selectedRunTypeIds, selectedProductIds }: GetCommonInputFiles) {
+        let inputSetId = 1; // ctx.getState().formViewModel.inputSetId;
+        this.inputService
+            .getCommonInputFiles(
+                inputSetId, 
+                selectedProductIds.join(','),
+                selectedRunTypeIds.join(',')
+            )
+            .subscribe (
+                (entries: InputFileDto[]) => {
+                    const state = ctx.getState();
+                    state.fileEntries = this.loadFiles(entries);
+                    state.formViewModel.inputsViewModel.inputFiles = entries;
+                    ctx.patchState(state);
+                },
+                (noCommonFilesMessage) => console.log(noCommonFilesMessage.response)
+            );
+    }
+
+    loadFiles(inputFiles: InputFileDto[]) {
+        let result = [];
+        inputFiles.forEach(inputFile => {
+            let file = new File([inputFile.blob], inputFile.fileName);
+            let fileEntry = new FileEntry(file.name, file, inputFile.modelParamId);
+            fileEntry.isValid = true;
+            fileEntry.isCheckingDuplicate = false;
+            fileEntry.isPersisted = true;
+            //fileEntry.inputNameId = inputFile.inputNameId;
+            result.push(fileEntry);
+        });
+        return result;
+    }
+
+    @Action(ResetFileEntries)
+    resetFileEntries(ctx: StateContext<AddConfigurationAlvStateModel>) {
+        let emptySet = [];
+        const state = ctx.getState();
+        state.fileEntries = [...emptySet];
+        ctx.patchState(state);
+    }
+
+    @Action(AddDroppedFilesToEntries)
+    addDroppedFilesToEntries(ctx: StateContext<AddConfigurationAlvStateModel>, { files }: AddDroppedFilesToEntries) {
+        let callbacks = [];
+        const state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        for (let file of files) {
+            let fileEntry = new FileEntry(file.name, file);
+            let index = fileEntries.push(fileEntry) - 1;
+            //callbacks.push(this.store.dispatch(new GetDuplicateFile(index)));
+            callbacks.push(this.fileChecks(index));
+        }
+        state.fileEntries = [...state.fileEntries];
+        ctx.patchState(state);
+        Promise.all(callbacks);
+    }
+    
+    // updating a file is like creating a new one
+    @Action(UpdateFile)
+    updateFile(ctx: StateContext<AddConfigurationAlvStateModel>, { fileEntryIndex, file }: UpdateFile) {
+        // adding as if its a new file entry (because we dont actually update on the backend)
+        let newfileEntry = new FileEntry(file.name, file);
+        const state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        fileEntries[fileEntryIndex] = newfileEntry;
+        ctx.patchState({
+            fileEntries: [...fileEntries]
+        });
+        //this.store.dispatch(new GetDuplicateFile(fileEntryIndex));
+        this.fileChecks(fileEntryIndex);
+    }
+
+    @Action(ResetDialogFile)
+    resetDialogFile(ctx: StateContext<AddConfigurationAlvStateModel>) {
+        ctx.patchState({
+            dialogFile: null
+        });
+    }
+
+    @Action(AddFileToEntries)
+    addFileToEntries(ctx: StateContext<AddConfigurationAlvStateModel>, { file }: AddFileToEntries) {
+        let fileEntry = new FileEntry(file.name, file);
+        const fileEntries = ctx.getState().fileEntries;
+        let index = fileEntries.push(fileEntry) - 1;
+        ctx.patchState({
+            fileEntries: [...fileEntries]
+        });
+        // check if this file is a duplicate of one that already exists
+        //this.store.dispatch(new GetDuplicateFile(index));
+        this.fileChecks(index);
+    }
+
+    @Action(UndoDeletingFile)
+    undoDeletingFile(ctx: StateContext<AddConfigurationAlvStateModel>, { index }: UndoDeletingFile) {
+        const state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        fileEntries[index].isDeleted = false;
+        ctx.patchState({
+            fileEntries: [...fileEntries]
+        });
+    }
+
+    @Action(DeleteFileEntry)
+    deleteFileEntry(ctx: StateContext<AddConfigurationAlvStateModel>, { index }: DeleteFileEntry) {
+        const state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        let fileEntry = fileEntries[index];
+        // if entry is valid (its persisted) then only mark as deleted to allow the undo this action
+        if (fileEntry.isValid)
+            fileEntry.isDeleted = true;
+        else
+            fileEntries.splice(index, 1);
+        ctx.patchState({
+            fileEntries: [...fileEntries]
+        });
+    }
+
+    @Action(CreateInputFiles)
+    createInputFiles(ctx: StateContext<AddConfigurationAlvStateModel>) {
+        let state = ctx.getState();
+        let allFileEntries = state.fileEntries;
+        let fileEntriesToCreate = allFileEntries.filter(x => !x.isPersisted);
+        let alreadyPersistedFileEntries = allFileEntries.filter(x => x.isPersisted);
+        let formData = fileEntriesToCreate.map(fileEntry => this.createInputFilesFormData(fileEntry));
+        this.inputService
+            .createInputs(formData)
+            .subscribe(
+                (createdInputFiles: InputFileDto[]) => {
+                    let fileEntriesCreated = [];
+                    createdInputFiles.forEach(createdInputFile => 
+                        fileEntriesCreated.push(this.addInputFile(createdInputFile)));
+                    state.fileEntries = [...alreadyPersistedFileEntries, ...fileEntriesCreated];
+                    // this will relfect any UI components that are subscribed to input files
+                    state.formViewModel.inputsViewModel.inputFiles = [...state.formViewModel.inputsViewModel.inputFiles, ...createdInputFiles];
+                    ctx.patchState(state);
+                    this.notify.showSuccess("Files Uploads Successfully", "Complete");
+                },
+                error => this.notify.showError("An error has occured", "Error")
+            );
+    }
+
+    addInputFile(inputFile: InputFileDto): FileEntry {
+        let file = new File([inputFile.blob], inputFile.fileName);
+        let fileEntry = new FileEntry(file.name, file, inputFile.modelParamId);
+        fileEntry.isValid = true;
+        fileEntry.isCheckingDuplicate = false;
+        fileEntry.isPersisted = true;
+        //fileEntry.inputNameId = inputFile.inputNameId;
+        return fileEntry;
+    }
+
+    @Action(RenameInputFile)
+    renameInputFile(ctx: StateContext<AddConfigurationAlvStateModel>, {index, newFileName} : RenameInputFile) {
+        let fileEntries = ctx.getState().fileEntries;
+        let targetEntry = fileEntries[index];
+        targetEntry.name = newFileName;
+        ctx.patchState({
+            fileEntries: [...fileEntries]
+        });
+        this.store.dispatch(new DoesInputFileNameExist(index));
+    }
+
+    @Action(CreateInputFile)
+    createInputFile(ctx: StateContext<AddConfigurationAlvStateModel>, { index }: CreateInputFile) {
+        let state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        let fileEntry = fileEntries[index];
+        let formData = [this.createInputFilesFormData(fileEntry)];
+        this.inputService
+            .createInputs(formData)
+            .subscribe(
+                success => {
+                    fileEntry.isPersisted = true;
+                    fileEntry.isValid = true;
+                    state.fileEntries = [...fileEntries];
+                    ctx.patchState(state);
+                    this.notify.showSuccess("Files Uploaded Successfully", "Complete");
+                },
+                error => this.notify.showError("An error has occured", "Error")
+            );
+    }
+
+    @Action(DeleteDuplicateInputFiles)
+    deleteDuplicateInputFiles(ctx: StateContext<AddConfigurationAlvStateModel>) {
+        let state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        let newFileEntries = fileEntries.filter(x => !x.isDuplicate);
+        ctx.patchState({
+            fileEntries: newFileEntries
+        });
+    }
+    
+    // stuff the inputNameId value into the filename to be parsed on the other side
+    createInputFilesFormData(fileEntry: FileEntry): FileParameter {
+        var formData = this.createFormData(fileEntry);
+        //formData.fileName = file.name + "INPUTNAMEID{"+inputNameId+"}";
+        formData.fileName = fileEntry.name; //file.name;
+        return formData;
+    }
+
+    @Action(ReplaceWithDuplicateFile)
+    replaceWithDuplicateFile(ctx: StateContext<AddConfigurationAlvStateModel>, { index }: ReplaceWithDuplicateFile) {
+        const state = ctx.getState();
+        let fileEntries = state.fileEntries;
+        let fileEntry = fileEntries[index];
+        fileEntry.overwriteWithDuplicateFile();
+        ctx.patchState({
+            fileEntries: [...fileEntries]
+        });
+    }
+
+    @Action(AddSelection)
+    addSelection(ctx: StateContext<AddConfigurationAlvStateModel>, params : AddSelection) {
+        const state = ctx.getState();
+        let formViewModel = state.formViewModel;
+        let configSetEntries = formViewModel.inputsViewModel.configSetEntries;
+        params.modelParamSelections.forEach(selection => {
+            params.selectedProductIds.forEach(productId => {
+                params.selectedProductIds.forEach(runTypeId => {
+                    var newConfigSetEntry = new ConfigModelParamInputDto();
+                    newConfigSetEntry.inputNameId = selection.inputNameId;
+                    newConfigSetEntry.modelParamId = selection.inputFileId;
+                    newConfigSetEntry.productId = productId;
+                    newConfigSetEntry.runTypeId = runTypeId;
+                    //newConfigSetEntry.isBasedEntry = false;
+                    configSetEntries.push(newConfigSetEntry);
+                });
+            });
+        });
+        ctx.patchState({
+            formViewModel: formViewModel
+        });
+    }
+
+    @Action(ApplyChanges)
+    applyChanges(ctx: StateContext<AddConfigurationAlvStateModel>, { modelParamId, selectedRowsSet } : ApplyChanges) {
+        let configSetEntries = this.getConfigSetEntries(ctx);
+        selectedRowsSet
+            .filter(x => x.selectedRows)
+            .map(x => x.selectedRows)
+            .forEach(selectedRows => {
+                selectedRows.forEach(selectedRow => {
+                    selectedRow.modelParamId = modelParamId;
+                    // check if this entry already exists in configSetEntries
+                    let entry = this.findEntryInConfigSetEntries(ctx, selectedRow);
+                    if (entry != undefined) {
+                        entry.modelParamId = modelParamId;
+                    } else {
+                        let newConfigSetEntry = new ConfigModelParamInputDto();
+                        newConfigSetEntry.inputNameId = selectedRow.inputNameId;
+                        newConfigSetEntry.modelParamId = modelParamId;
+                        newConfigSetEntry.productId = selectedRow.productId;
+                        newConfigSetEntry.assetGroupId = selectedRow.assetGroupId;
+                        newConfigSetEntry.runTypeId = selectedRow.runTypeId;
+                        //newConfigSetEntry.isBasedEntry = false;
+                        configSetEntries.push(newConfigSetEntry);
+                    }
+                })
+            });
+        // dispatch to ngxs 
+        // we are updating the observable collection here with the new values
+        // this will trigger the tables here with the new values (because of SelectedDataSource)
+        this.store.dispatch(new UpdateConfigSetEntries(configSetEntries))
+    }
+
+    findEntryInConfigSetEntries(ctx: StateContext<AddConfigurationAlvStateModel>, entry: ConfigModelParamInputDto): ConfigModelParamInputDto {
+        let configSetEntries = this.getConfigSetEntries(ctx);
+        return configSetEntries.find((x: ConfigModelParamInputDto) => 
+            x.productId === entry.productId && 
+            x.runTypeId === entry.runTypeId &&
+            x.inputNameId === entry.inputNameId);
+    }
+    
+    getConfigSetEntries(ctx: StateContext<AddConfigurationAlvStateModel>) {
+        return ctx.getState().formViewModel.inputsViewModel.configSetEntries;
+    }
+
+    indexOfSelectionCombination
+    (
+        productIds: number[], 
+        runTypeIds: number[], 
+        selection: {inputNameId: number, inputFileId: number},
+        configSetEntries: ConfigModelParamInputDto[]
+    ): number {
+        return configSetEntries.findIndex(x =>
+            productIds.includes(x.productId) &&
+            runTypeIds.includes(x.runTypeId) &&
+            x.modelParamId === selection.inputFileId &&
+            x.inputNameId === selection.inputNameId
+        );
+    }
+
+    @Action(UpdateConfigSetEntries)
+    updateConfigSetEntries(ctx: StateContext<AddConfigurationAlvStateModel>, { configSetEntries }: UpdateConfigSetEntries) {
+        const state = ctx.getState();
+        let formViewModel = state.formViewModel;
+        formViewModel.inputsViewModel.configSetEntries = [...configSetEntries];
+        ctx.patchState({
+            formViewModel: formViewModel
+        });
+    }
+
+    @Action(UpdateSelectedCells)
+    updateSelectedCells(ctx: StateContext<AddConfigurationAlvStateModel>, { selectedCells }: UpdateSelectedCells) {
+        const state = ctx.getState();
+        ctx.patchState({
+            selectedCells:  [...selectedCells]
+        });
+    }
+
+    @Action(ResetSelectedCells)
+    resetSelectedCells(ctx: StateContext<AddConfigurationAlvStateModel>) {
+        let emptySet = [];
+        ctx.patchState({
+            selectedCells:  [...emptySet]
+        });
+    }
+
+    @Action(UpdateProductOrAssetGroup)
+    updateProductOrAssetGroup(ctx: StateContext<AddConfigurationAlvStateModel>, { newValue }: UpdateProductOrAssetGroup) {
+        ctx.patchState({
+            productOrAssetGroup:  newValue
+        });
+    }
+
+    // HELPER FUNCTIONS
+    get runGroupId(): number {
+        return this.route.snapshot.firstChild.params['runGroupId'];
+    }
+
+    fileChecks(fileEntryIndex: number) {
+        this.store.dispatch(new GetDuplicateFile(fileEntryIndex));
+        this.store.dispatch(new DoesInputFileNameExist(fileEntryIndex));
+    }
+
+    getStateForInputsViewModel(state: AddConfigurationAlvStateModel): InputsViewModel {
+        return state.formViewModel.inputsViewModel
+    }
+
+    getInputsConfigSetEntries(state: AddConfigurationAlvStateModel) {
+        return state.formViewModel.inputsViewModel.configSetEntries;
+    }
+}
+
+
+
+import { State, Action, StateContext, Selector, Store, createSelector, Select } from '@ngxs/store';
+import { SelectedCells } from 'ClientApp/app/configurations/add-configuration/add-configuration-alv/inputs/inputs-grid/infrastructure/selected-cells.model';
+import { ConfigModelParamInputDto } from 'ClientApp/core/services/api.client.generated';
+import { UpdateSelectedRows, AddSelectedRowsSet, DeleteSelectedRowsSet, ApplyChanges, CalculateCommonInputs } from 'ClientApp/app/_actions/configurations/add-configuration-alv/selection-info/selection-info.action';
+import { Observable } from 'rxjs';
+import { AddConfigurationAlvState } from '../add-configuration-alv.state';
+import { UpdateConfigSetEntries } from 'ClientApp/app/_actions/configurations/add-configuration-alv/add-configuration-alv.action';
+
+export class SelectedRows {
+    constructor(productId: number, assetGroupId: number, runTypeId: number) {
+        this.productId = productId;
+        this.runTypeId = runTypeId;
+        this.assetGroupId = assetGroupId;
+    }
+    productId: number;
+    assetGroupId: number;
+    runTypeId: number;
+    selectedRows: ConfigModelParamInputDto[];
+}
+
+export class CommonInput {
+    constructor() {
+
+    }
+    modelParamInputId: number;
+    matchedElements: number[];
+}
+
+export class SelectionInfoStateModel {
+    // id is of the format 'productId-runTypeId'
+    selectedRowsSet: SelectedRows[];
+    // array of arrays: array per common modelParamInputId : each element of a single array has the same modelParamId
+    //commonInputs: CommonInput[];
+}
+@State<SelectionInfoStateModel>({
+    name: 'selectionInfo',
+    defaults: {
+        selectedRowsSet: []
+    }
+})
+export class SelectionInfoState {
+
+    constructor(private store: Store) { }
+    
+    // EXTERNAL
+    @Select(AddConfigurationAlvState.configSetEntries)
+    configSetEntries$: Observable<ConfigModelParamInputDto[]>;
+    
+    // QUERIES
+    @Selector()
+    public static selectedRowsSet(state: SelectionInfoStateModel) {
+        return state.selectedRowsSet;
+    }
+    // return list of selected rows for productId and runTypeId
+    static selectedRows(productId: number, assetGroupId: number, runTypeId: number) {
+        return createSelector([SelectionInfoStateModel], (state: SelectionInfoStateModel) => {
+            return state.selectedRowsSet.find(element => 
+                element.productId === productId && 
+                element.assetGroupId === assetGroupId && 
+                element.runTypeId === runTypeId
+            );
+        });
+    }
+    
+    // COMMANDS
+    // a new grid cell was clicked, so we create a new entry
+    @Action(AddSelectedRowsSet)
+    addSelectedRowsSet(ctx: StateContext<SelectionInfoStateModel>, { productId, assetGroupId, runTypeId }: AddSelectedRowsSet) {
+        let state = ctx.getState();
+        let newSelectedRows = new SelectedRows(productId, assetGroupId, runTypeId);
+        let newSelectedRowsSet = [...state.selectedRowsSet, newSelectedRows]
+        this.patchSelectedRowsSet(ctx, newSelectedRowsSet);
+    }
+
+    // a new grid cell was unclicked, so we delete the associated entry
+    @Action(DeleteSelectedRowsSet)
+    deleteSelectedRowsSet(ctx: StateContext<SelectionInfoStateModel>, { productId, assetGroupId, runTypeId }: AddSelectedRowsSet) {
+        let state = ctx.getState();
+        let newSelectedRows = state.selectedRowsSet.filter(selectedRows => 
+            selectedRows.productId !== productId && 
+            selectedRows.assetGroupId !== assetGroupId && 
+            selectedRows.runTypeId !== runTypeId
+        );
+        this.patchSelectedRowsSet(ctx, newSelectedRows);
+    }
+
+    @Action(UpdateSelectedRows)
+    updateSelectedRows(ctx: StateContext<SelectionInfoStateModel>, { productId, runTypeId, newSelectedRows }: UpdateSelectedRows) {
+        let state = ctx.getState();
+        let allSelectedRowsSet = state.selectedRowsSet;
+        let targetSelectedRows = allSelectedRowsSet.find(selectedRows => 
+            selectedRows.productId === productId && selectedRows.runTypeId === runTypeId
+        );
+        targetSelectedRows.selectedRows = [...newSelectedRows];
+        this.patchSelectedRowsSet(ctx, allSelectedRowsSet);
+    }
+    
+    @Action(CalculateCommonInputs)
+    calculateCommonInputs(ctx: StateContext<SelectionInfoStateModel>) {
+        //this.configSetEntries.forEach(configSetEntry => {
+                
+        //});
+    }
+
+    // HELPER FUNCTIONS
+    patchSelectedRowsSet(ctx: StateContext<SelectionInfoStateModel>, newSelectedRowsSet: SelectedRows[]) {
+        ctx.patchState({
+            selectedRowsSet: [...newSelectedRowsSet]
+        });
+    }
+}
+
+
+
+import { State, Action, StateContext, Selector, Store, createSelector } from '@ngxs/store';
+import { CreateConfigurationAiCommand, InputsService, CreateConfigurationAiViewModel, KernelConfigDto, CreateKernelConfigCommand, CreateRunDefinitionCommand, RunDefinitionDto } from 'ClientApp/core/services/api.client.generated';
+import { CreateConfiguration, GetCreateConfiguration, CreateSelection, GetExistingInputs, AddOption, CreateRunDefinition, FillForm, GetKernelConfig, GetRunDefinition, CreateKernelConfig, SubmitForm } from '../../../_actions/configurations/add-configuration-athora/add-configuration-athora.action';
+import { NotificationService } from 'ClientApp/app/services/notification.service';
+import { Router, ActivatedRoute } from '@angular/router';
+import { UpdateFormValue, UpdateFormDirty } from '@ngxs/form-plugin';
+import { FormControl, AbstractControl } from '@angular/forms';
+import { SetInputSelection, SetInputSetId } from 'ClientApp/app/_actions/configurations/add-configuration-athora/form.action';
+import { BehaviorSubject } from 'rxjs';
+import { ModelParamTypes, AssociationTypes } from '../../../shared/constants'; 
+
+export class AddConfigurationAiStateModel {
+    formViewModel: CreateConfigurationAiViewModel;
+    existingKernelConfigInputs: {[key: number]: string};
+    existingRunDefinitionInputs: {[key: number]: string};
+    existingCalculationExecutionInputs: {[key: number]: string};
+    existingExpensesInputs: {[key: number]: string};
+    existingEconomicInputs: {[key: number]: string};
+    selectedKernelConfigId: number;
+    selectedRunDefinitionId: number;
+    selectedCalculationExecutionId: number;
+    selectedExpensesId: number;
+    selectedEconomicId: number;
+    selectedKernelConfigName: string;
+    selectedRunDefinitionName: string;
+    selectedCalculationExecutionName: string;
+    selectedExpensesName: string;
+    selectedEconomicName: string;
+    runDefinitionEntries: RunDefinitionDto[];
+}
+@State<AddConfigurationAiStateModel>({
+    name: 'addConfigurationAegon',
+    defaults: {
+        formViewModel: undefined,
+        existingKernelConfigInputs: undefined,
+        existingRunDefinitionInputs: undefined,
+        existingCalculationExecutionInputs: undefined,
+        existingExpensesInputs: undefined,
+        existingEconomicInputs: undefined,
+        selectedKernelConfigId: 0,
+        selectedRunDefinitionId: 0,
+        selectedCalculationExecutionId: 0,
+        selectedExpensesId: 0,
+        selectedEconomicId: 0,
+        selectedKernelConfigName: '',
+        selectedRunDefinitionName: '',
+        selectedCalculationExecutionName: '',
+        selectedExpensesName: '',
+        selectedEconomicName: '',
+        runDefinitionEntries: []
+    }
+})
+export class AddConfigurationAthoraState {
+
+    constructor(
+        private inputService: InputsService,
+        public notify: NotificationService,
+        private router: Router,
+        private route: ActivatedRoute,
+        private store: Store) {
+    }
+
+    // ------------------ SELECTORS ------------------
+    @Selector()
+    public static products(state: AddConfigurationAiStateModel) {
+        return state.formViewModel.products;
+    }
+
+    @Selector()
+    public static runTypes(state: AddConfigurationAiStateModel) {
+        return state.formViewModel.runTypes;
+    }
+
+    static getAssociation(type: number) {
+        return createSelector([AddConfigurationAthoraState], (state: AddConfigurationAiStateModel) => {
+            switch (type) {
+                case AssociationTypes.ProductBased:
+                    return state.formViewModel.products;
+                    break;
+                case AssociationTypes.RunTypeBased:
+                    return state.formViewModel.runTypes;
+                    break;
+                default:
+                    console.log("Type " + type + " does not exist");
+            }
+            
+        });
+    }
+
+    @Selector()
+    public static viewModel(state: AddConfigurationAiStateModel) {
+        return state.formViewModel;
+    }
+
+    @Selector()
+    public static kernelConfigViewModel(state: AddConfigurationAiStateModel) {
+        return state.formViewModel.kernelConfigViewModel;
+    }
+
+    @Selector()
+    public static existingKernelConfigInputs(state: AddConfigurationAiStateModel) {
+        return state.existingKernelConfigInputs;
+    }
+
+    @Selector()
+    public static selectedKernelConfigId(state: AddConfigurationAiStateModel) {
+        return state.selectedKernelConfigId;
+    }
+
+    @Selector()
+    public static selectedKernelConfigName(state: AddConfigurationAiStateModel) {
+        return state.selectedKernelConfigName;
+    }
+
+    @Selector()
+    public static runDefinitionEntries(state: AddConfigurationAiStateModel) {
+        return state.runDefinitionEntries;
+    }
+
+    static selectedInput(type: string) {
+        return createSelector([AddConfigurationAthoraState], (state: AddConfigurationAiStateModel) => {
+            return state["selected"+type+"Id"];
+        });
+    }
+
+    static selectedInputName(type: string) {
+        return createSelector([AddConfigurationAthoraState], (state: AddConfigurationAiStateModel) => {
+            return state["selected"+type+"Name"];
+        });
+    }
+
+    static existingInputs(type: string) {
+        return createSelector([AddConfigurationAthoraState], (state: AddConfigurationAiStateModel) => {
+            return state["existing"+type+"Inputs"];
+        });
+    }
+
+    // ------------------ ACTIONS ------------------
+    @Action(GetCreateConfiguration)
+    getCreateConfiguration(ctx: StateContext<AddConfigurationAiStateModel>) {
+        let runGroupId =  this.route.snapshot.firstChild.params['runGroupId'];
+        this.inputService
+            .getCreateConfigurationAi(runGroupId)
+            .subscribe((result: CreateConfigurationAiViewModel) => {
+                const state = ctx.getState();
+                state.formViewModel = result;
+                ctx.patchState(state);
+                // set the forms inputSetId
+                this.store.dispatch(new SetInputSetId(result.inputSetId));
+            });
+    }
+
+    @Action(GetExistingInputs)
+    getExistingInputs(ctx: StateContext<AddConfigurationAiStateModel>,  { inputType }: GetExistingInputs) {
+        this.inputService
+            .getExistingConfigurations(inputType)
+            .subscribe((result: { [key: number] : string }) => {
+                const state = ctx.getState();
+                state["existing"+inputType+"Inputs"] = result;
+                ctx.patchState(state);   
+            });
+    }
+
+    @Action(CreateSelection)
+    createSelection(ctx: StateContext<AddConfigurationAiStateModel>, { payload }: CreateSelection) {
+        this.removeModelParamsNotUsed(payload.modelParamSelections);
+        this.inputService
+            .createSelectionAi(payload)
+            .subscribe(
+                (inputSetId: number) => {
+                    this.store.dispatch(new SetInputSetId(inputSetId));
+                    this.notify.showSuccess("Selection has been added successfully", "Success");
+                    //// reset form (except inputSetName)
+                    //this.buildForm();
+                },
+                error => this.notify.showError(error.response, "Error Occured")
+            );        
+    }
+
+    //@Action(CreateConfiguration)
+    //createConfiguration(ctx: StateContext<AddConfigurationAiStateModel>) {
+    //    let runGroupId = 0;
+    //    let inputSetId = 0;
+    //    var formData = new CreateConfigurationAiCommand({runGroupId, inputSetId});
+    //    this.inputService
+    //        .createConfigurationAi(formData)
+    //        .subscribe(
+    //            success => this.router.navigate(['/Configurations']),
+    //            error => this.notify.showError(error.response, "Error Occured")
+    //        );        
+    //}
+
+    @Action(SubmitForm)
+    submitForm(ctx: StateContext<AddConfigurationAiStateModel>, { inputType, inputName, inputData }: SubmitForm) {
+        switch (inputType) {
+            case ModelParamTypes.KernelConfig:
+                this.store.dispatch(new CreateKernelConfig(inputName, inputData));
+                break;
+            case ModelParamTypes.RunDefinition:
+                this.store.dispatch(new CreateRunDefinition(inputName, inputData));
+                break;
+            default:
+                this.notify.showError("Unrecognised Input Type", "Error");
+        }
+    }
+
+    @Action(CreateKernelConfig)
+    createKernelConfig(ctx: StateContext<AddConfigurationAiStateModel>, { inputName, inputData }: CreateKernelConfig) {
+        let formData = new KernelConfigDto(inputData);
+        let command = new CreateKernelConfigCommand({name: inputName, kernelConfigInput: formData});
+        this.inputService
+            .createKernelConfig(command)
+            .subscribe(
+                createdEntry => 
+                    this.onCreateSuccess('KernelConfig', inputName, createdEntry.modelParamId),
+                error => 
+                    this.notify.showError(error.response, "Error Occured")
+            ); 
+    }
+
+    // SUBMIT FORM (ADD NEW KERNEL CONFIG)
+    @Action(CreateRunDefinition)
+    createRunDefinition(ctx: StateContext<AddConfigurationAiStateModel>, { inputData, inputName }: CreateRunDefinition) { 
+
+        let command = new CreateRunDefinitionCommand({name: inputName, runDefinitionInput: ctx.getState().runDefinitionEntries });
+        this.inputService
+            .createRunDefinition(command)
+            .subscribe(
+                createdEntries => {
+                    let modelParamId = createdEntries[0].modelParamId;
+                    this.onCreateSuccess('RunDefinition', inputName, modelParamId);
+                },
+                error => this.notify.showError(error, "Error Occured")
+            );
+    }
+
+    // add to configurations list
+    @Action(AddOption)
+    addOption(ctx: StateContext<AddConfigurationAiStateModel>, {inputId, inputName, inputType}: AddOption) {
+        // update the state
+        let newModelParamId = inputId.toString();
+        const state = ctx.getState();
+        (state["existing"+inputType+"Inputs"])[newModelParamId] = inputName;
+        state["selected"+inputType+"Id"] = newModelParamId;
+        state["selected"+inputType+"Name"] = inputName;
+        ctx.patchState(state);
+    }
+
+    @Action(FillForm)
+    fillForm(ctx: StateContext<AddConfigurationAiStateModel>, { inputType, inputId }: FillForm) {
+        switch (inputType) {
+            case ModelParamTypes.KernelConfig:
+                this.store.dispatch(new GetKernelConfig(inputId));
+                break;
+            case ModelParamTypes.RunDefinition:
+                this.store.dispatch(new GetRunDefinition(inputId));
+                break;
+            default:
+                this.notify.showError("Unrecognised Input Type", "Error");
+                return;
+        }
+        const state = ctx.getState();
+        state["selected"+inputType+"Id"] = inputId;
+        state["selected"+inputType+"Name"] = state["existing"+inputType+"Inputs"][inputId];
+        ctx.patchState(state);
+    }
+
+    @Action(GetKernelConfig)
+    getKernelConfig(ctx: StateContext<AddConfigurationAiStateModel>, { inputId }: GetKernelConfig) {
+        this.inputService
+            .getKernelConfig(inputId)
+            .subscribe(
+                (result: KernelConfigDto) => {
+                    this.store.dispatch(
+                        new UpdateFormValue({
+                            value: result,
+                            path: 'kernelConfigForm.details'
+                        })
+                    );
+                },
+                error => this.notify.showError(error.response, "Error Occured")
+            );
+    }
+
+    @Action(GetRunDefinition)
+    getRunDefinition(ctx: StateContext<AddConfigurationAiStateModel>, { inputId }: GetRunDefinition) {
+        this.inputService
+            .getRunDefinition(inputId)
+            .subscribe(
+                (result: RunDefinitionDto[]) => {
+                    const state = ctx.getState();
+                    state.runDefinitionEntries = result;
+                    ctx.patchState(state);
+                },
+                error => this.notify.showError(error, "Error Occured")
+            );
+    }
+    
+    // HELPER FILES
+    // some modelParamSelections will be null when adding selection
+    removeModelParamsNotUsed(obj) {
+        for (var propName in obj) { 
+            if (obj[propName] === null || obj[propName] === undefined) {
+                delete obj[propName];
+            }
+        }
+    }
+
+    // when a creation has completed succcesfully
+     // add to existing inputs
+     // and set the value of that input to the one added
+    onCreateSuccess(inputType: string, inputName: string, modelParamId: number) {
+        this.store.dispatch(new AddOption(modelParamId, inputName, inputType));
+        this.store.dispatch(new SetInputSelection(modelParamId, inputType));
+        this.notify.showSuccess("Input added successfully !!", "Notification");
+    }
+
+    resetForm(path: string) {
+        // reset form
+        this.store.dispatch(
+            new UpdateFormDirty({
+                dirty: true,
+                path: path
+            })
+        );
+    }
+}
+
+
+
+import { State, Store, Selector, Action, StateContext, createSelector, Select } from '@ngxs/store';
+import { ProductChecked, SetInputSelection, SetInputSetId, GetInputSelections, GetInputSelection, ResetCreateSelection } from 'ClientApp/app/_actions/configurations/add-configuration-athora/form.action';
+import { FormControl, FormArray, FormGroup, Validators } from '@angular/forms';
+import { ArrayValidators } from 'ClientApp/app/configurations/add-configuration/add-configuration-athora/validation/form-array.validator';
+import * as Constants from '../../../shared/constants'; 
+import { GroupValidators } from 'ClientApp/app/configurations/add-configuration/add-configuration-athora/validation/form-group.validator';
+import { UpdateFormValue } from '@ngxs/form-plugin';
+import { AddConfigurationAthoraState } from './add-configuration-athora.state';
+import { Observable } from 'rxjs';
+import { RunDefinitionDto } from 'ClientApp/core/services/api.client.generated';
+
+// INTERFACE
+// all forms have this structure
+class FormDetail {
+    details: {
+        model: FormGroup,
+        dirty: boolean,
+        status: string,
+        errors: {}
+    }
+}
+// need a unique type so that store can access the form data
+export class CreationConfigurationFormDetail extends FormDetail{ }
+export class CreationSelectionFormDetail extends FormDetail{ }
+export class KernelConfigFormDetail extends FormDetail{ }
+export class RunDefinitionFormDetail extends FormDetail{ }
+
+// CREATE CONFIGURATION
+@State<CreationConfigurationFormDetail>({
+    name: "creatConfigurationForm",
+    defaults: {
+        details: {
+            model: undefined,
+            dirty: false,
+            status: "",
+            errors: {}
+        }
+    }
+})
+export class CreatConfigurationFormState {
+    constructor(private store: Store) { }
+}
+
+
+// CREATE SELECTION FORM
+@State<CreationSelectionFormDetail>({
+    name: "createSelectionForm",
+    defaults: {
+        details: {
+            model: undefined,
+            dirty: false,
+            status: "",
+            errors: {}
+        }
+    }
+})
+export class CreatSelectionFormState {
+    
+    constructor(private store: Store) { }
+
+    @Selector()
+    public static products(state: CreationSelectionFormDetail) {
+        return state.details.model["selectedProducts"];
+    }
+
+    @Selector()
+    public static runTypes(state: CreationSelectionFormDetail) {
+        return state.details.model["selectedRunTypes"];
+    }
+
+    @Action(SetInputSetId)
+    setInputSetId(ctx: StateContext<CreationSelectionFormDetail>, {inputSetId}: SetInputSetId) {
+        let state = ctx.getState();
+        state.details.model["inputSetId"] = inputSetId.toString();   
+        // update the form (this will reflect to the drop downs and set its selected to {{inputId}})
+        this.store.dispatch(
+            new UpdateFormValue({
+                value: state.details.model,
+                path: 'createSelectionForm.details'
+            })
+        );
+    }
+
+    @Action(SetInputSelection)
+    setInputSelection(ctx: StateContext<CreationSelectionFormDetail>, {inputId, inputType}: SetInputSelection) {
+        let state = ctx.getState();
+        const modelParamSelections = state.details.model["modelParamSelections"];
+        modelParamSelections[inputType] = inputId.toString();   
+        // update the form (this will reflect to the drop downs and set its selected to {{inputId}})
+        this.store.dispatch(
+            new UpdateFormValue({
+                value: state.details.model,
+                path: 'createSelectionForm.details'
+            })
+        );
+    }
+}
+
+@State<KernelConfigFormDetail>({
+    name: "kernelConfigForm",
+    defaults: {
+        details: {
+            model: undefined,
+            dirty: false,
+            status: "",
+            errors: {}
+        }
+    }
+})
+export class KernelConfigFormState {
+    constructor(private store: Store) { }
+}
+
+@State<RunDefinitionFormDetail>({
+    name: "runDefinitionForm",
+    defaults: {
+        details: {
+            model: undefined,
+            dirty: false,
+            status: "",
+            errors: {}
+        }
+    }
+})
+export class RunDefinitionFormState {
+    constructor(private store: Store) { }
+}

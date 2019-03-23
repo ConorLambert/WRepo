@@ -1,0 +1,289 @@
+import { KernelConfigAlvDto } from "ClientApp/core/services/api.client.generated";
+
+export class GetKernelConfigAlv {
+    static readonly type = '[CONFIGURATION] Get KernelConfigAlv';
+    constructor (public modelParamId: number) {}
+}
+
+export class CreateKernelConfigAlv {
+    static readonly type = '[CONFIGURATION] CREATE Kernel Config Alv';
+    constructor(public inputName: string, public inputData : KernelConfigAlvDto) {}
+}
+
+
+
+
+import { InputFileDto, ConfigModelParamInputDto } from "ClientApp/core/services/api.client.generated";
+import { SelectedRows } from "ClientApp/app/_state/configurations/add-configuration-alv/selection-info/selection-info.state";
+
+export class UpdateSelectedRows {
+    static readonly type = '[CONFIGURATION] Update Selected Rows';
+    constructor (
+        public productId: number, 
+        public assetGroupId: number,
+        public runTypeId: number, 
+        public newSelectedRows: ConfigModelParamInputDto[]
+    ) {}
+}
+
+export class AddSelectedRowsSet {
+    static readonly type = '[CONFIGURATION] Add Selected Rows Set';
+    constructor (public productId: number, public assetGroupId: number, public runTypeId: number) {}
+}
+
+export class DeleteSelectedRowsSet {
+    static readonly type = '[CONFIGURATION] Delete Selected Rows Set';
+    constructor (public productId: number, public assetGroupId: number, public runTypeId: number) {}
+}
+
+export class ApplyChanges {
+    static readonly type = '[CONFIGURATION] Apply Changes';
+    constructor (public modelParamId: number, public selectedRowsSet: SelectedRows[]) {}
+}
+
+export class CalculateCommonInputs {
+    static readonly type = '[CONFIGURATION] Calculate Common Inputs';
+}
+
+
+
+
+import { InputFileDto, ConfigModelParamInputDto } from "ClientApp/core/services/api.client.generated";
+import { SelectedCells } from "ClientApp/app/configurations/add-configuration/add-configuration-alv/inputs/inputs-grid/infrastructure/selected-cells.model";
+
+export class CreateConfigurationAlv {
+    static readonly type = '[CONFIGURATION] GET Configuration'
+    constructor(public runGroupId: number, public inputId: number) {}
+}
+
+export class AddSelection {
+    static readonly type = '[CONFIGURATION] ADD Selection Alv';
+    constructor
+    (
+        public selectedRunTypeIds: number[], 
+        public selectedProductIds: number[], 
+        public modelParamSelections: {inputNameId: number, inputFileId: number}[]
+    ) {}
+}
+
+export class GetCreateConfigurationAlv {
+    static readonly type = '[CONFIGURATION] GET Configuration Alv'
+}
+
+export class GetCommonInputFiles {
+    static readonly type = '[CONFIGURATION] GET Common Inputs Files'
+    constructor(public selectedRunTypeIds: number[], public selectedProductIds: number[]) {}
+}
+
+export class GetInputFile {
+    static readonly type = '[CONFIGURATION] GET Inputs File'
+    constructor(public modelParamId: number) {}
+}
+
+export class GetDuplicateFile {
+    static readonly type = '[CONFIGURATION] GET Duplicate File';
+    constructor(public fileEntryIndex: number) {}
+}
+
+export class DoesInputFileNameExist {
+    static readonly type = '[CONFIGURATION] Does Input File Already Exist';
+    constructor(public fileEntryIndex: number) {}
+}
+
+export class FileAlreadyExists {
+    static readonly type = '[CONFIGURATION] File Already Exists';
+    constructor(public fileEntryIndex: number, public duplicateFile: InputFileDto) {}
+}
+
+export class UpdateFile {
+    static readonly type = '[CONFIGURATION] Update File';
+    constructor(public fileEntryIndex: number, public file: File) {}
+}
+
+export class ResetDialogFile {
+    static readonly type = '[CONFIGURATION] Reset Dialog File';
+}
+
+export class AddDroppedFilesToEntries {
+    static readonly type = '[CONFIGURATION] Add Dropped Files to Entries'
+    constructor(public files: File[]) {}
+}
+export class ResetFileEntries {
+    static readonly type = '[CONFIGURATION] Reset File Entries';
+}
+export class AddFileToEntries {
+    static readonly type = '[CONFIGURATION] Add File To Entry'
+    constructor(public file: File) {}
+}
+
+export class DeleteFileEntry {
+    static readonly type = '[CONFIGURATION] Delete File Entry'
+    constructor(public index: number) {}
+}
+
+export class UndoDeletingFile {
+    static readonly type = '[CONFIGURATION] Undo Deleting File'
+    constructor(public index: number) {}
+}
+
+export class ReplaceWithDuplicateFile {
+    static readonly type = '[CONFIGURATION] Replace with Duplicate File'
+    constructor(public index: number) {}
+}
+
+export class ConvertOptionToInt {
+    static readonly type = '[CONFIGURATION] Convert Option To Int'
+    constructor(public index: number) {}
+}
+
+export class CreateInputFiles {
+    static readonly type = '[CONFIGURATION] Create Inputs Files';
+}
+
+export class DeleteDuplicateInputFiles {
+    static readonly type = '[CONFIGURATION] Delete Duplicate Inputs Files';
+}
+
+export class CreateInputFile {
+    static readonly type = '[CONFIGURATION] Create Input File'
+    constructor(public index: number) {}
+}
+
+export class RenameInputFile {
+    static readonly type = '[CONFIGURATION] Rename Input File'
+    constructor(public index: number, public newFileName: string) {}
+}
+
+export class UpdateConfigSetEntries {
+    static readonly type = '[CONFIGURATION] Update Config Entries'
+    constructor(public configSetEntries: ConfigModelParamInputDto[]) {}
+}
+
+export class UpdateSelectedCells {
+    static readonly type = '[CONFIGURATION] Update Selected Cells'
+    constructor(public selectedCells: SelectedCells[]) {}
+}
+
+export class ResetSelectedCells {
+    static readonly type = '[CONFIGURATION] Reset Selected Cells';
+}
+
+export class UpdateProductOrAssetGroup {
+    static readonly type = '[CONFIGURATION] Update Product Or Asset Group'
+    constructor(public newValue: string) {}
+}
+
+
+
+
+import { CreateConfigurationAiCommand, CreateSelectionAiCommand, KernelConfigDto, RunDefinitionDto } from "ClientApp/core/services/api.client.generated";
+
+export class CreateConfiguration {
+    static readonly type = '[CONFIGURATION] GET Configuration'
+    constructor(public newConfigurationName: string) {}
+}
+
+export class GetCreateConfiguration {
+    static readonly type = '[CONFIGURATION] GET Configuration'
+}
+
+export class GetExistingInputs {
+    static readonly type = '[CONFIGURATION] GET Existing Inputs'
+    constructor(public inputType: string) {}
+}
+
+export class CreateSelection {
+    static readonly type = '[CONFIGURATION] CREATE Selection'
+    constructor(public payload: CreateSelectionAiCommand) {}
+}
+
+// GET DATA
+export class FillForm {
+    static readonly type = '[CONFIGURATION] FILL Form';
+    constructor(public inputType: string, public inputId: number) {}
+}
+
+export class GetInputBase {
+    constructor(public inputId: number) {}
+}
+
+export class GetKernelConfig extends GetInputBase {
+    static type = `[CONFIGURATION] GET KernelConfig`;
+}
+
+export class GetRunDefinition extends GetInputBase {
+    static type = `[CONFIGURATION] GET RunDefinition`;
+}
+
+// CREATES
+export class SubmitForm {
+    static type = `[CONFIGURATION] Submit Form`
+    constructor(public inputType: string, public inputName: string, public inputData : any) {}
+}
+
+export class CreateKernelConfig {
+    static readonly type = '[CONFIGURATION] CREATE Kernel Config';
+    constructor(public inputName: string, public inputData : KernelConfigDto) {}
+}
+
+export class CreateRunDefinition {
+    static readonly type = '[CONFIGURATION] CREATE Run Definition';
+    constructor(public inputName: string, public inputData : RunDefinitionDto[]) {}
+}
+
+// HELPER
+export class AddOption {
+    static readonly type = '[CONFIGURATION] ADD Option';
+    constructor(public inputId: number, public inputName: string, public inputType: string) {}
+}
+
+
+
+import { CreateConfigurationAlvCommand, CreateSelectionAlvCommand, RunDefinitionDto } from "ClientApp/core/services/api.client.generated";
+
+export class ProductChecked {
+    static readonly type = '[CONFIGURATION ALV] Product Checked';
+    constructor(public productId: number, public isChecked: boolean) {}
+}
+
+export class RunTypeChecked {
+    static readonly type = '[CONFIGURATION ALV] Run Type Checked';
+    constructor(public runTypeId: number) {}
+}
+
+export class GetCheckedProducts {
+    static readonly type = '[CONFIGURATION ALV] Get Checked Products';
+}
+
+export class GetCheckedRunTypes {
+    static readonly type = '[CONFIGURATION ALV] Get Checked RunTypes';
+}
+
+export class GetCheckedAssets {
+    static readonly type = '[CONFIGURATION ALV] Get Checked Assets';
+}
+
+export class SetInputSelection {
+    static readonly type = '[CONFIGURATION] Set Input Selection';
+    constructor(public inputId: number, public inputType: string) {}
+}
+
+export class SetInputSetId {
+    static readonly type = '[CONFIGURATION] SET InputSetId';
+    constructor(public inputSetId: number) {}
+}
+
+export class GetInputSelection {
+    static readonly type = '[CONFIGURATION] Get Input Selection';
+    constructor(public inputType: string) {}
+}
+
+export class GetInputSelections {
+    static readonly type = '[CONFIGURATION] Get Input Selections';
+    constructor() {}
+}
+
+export class ResetCreateSelection {
+    static readonly type = '[CONFIGURATION] Reset Create Selection';
+    constructor() {}
+}

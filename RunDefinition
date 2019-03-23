@@ -1,0 +1,328 @@
+import { Component, Input, Output, EventEmitter, QueryList, ViewChild} from '@angular/core';
+import { FormGroup, FormBuilder, Validators, FormArray, AbstractControl, FormControl } from '@angular/forms';
+import { RunDefinitionDto, InputsService, CreateConfigurationAiViewModel, CreateRunDefinitionCommand } from 'ClientApp/core/services/api.client.generated';
+import { MatTableDataSource, MatTable } from '@angular/material';
+import { DataSource } from '@angular/cdk/table';
+import { CollectionViewer } from '@angular/cdk/collections';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { CdkDragDrop, moveItemInArray, transferArrayItem, CdkDropList} from '@angular/cdk/drag-drop';
+import clonedeep from 'lodash.clonedeep';
+import { NotificationService } from 'ClientApp/app/services/notification.service';
+import * as Constants from '../../../../shared/constants'; 
+import { AddConfigurationAthoraState } from 'ClientApp/app/_state/configurations/add-configuration-athora/add-configuration-athora.state';
+import { Select, Store } from '@ngxs/store';
+import { GetExistingInputs, CreateRunDefinition } from 'ClientApp/app/_actions/configurations/add-configuration-athora/add-configuration-athora.action';
+import { RunDefinitionFormState } from 'ClientApp/app/_state/configurations/add-configuration-athora/form-state.component';
+
+@Component({
+    selector: 'run-definition',
+    templateUrl: './run-definition.component.html',
+    styleUrls: ['./run-definition.component.css']
+})
+
+export class RunDefinitionComponent {
+    
+    @Select(AddConfigurationAthoraState.runDefinitionEntries) 
+    runDefinitionEntries$: Observable<RunDefinitionDto[]>;
+
+    // INPUTS AND OUTPUTS
+    @Input()
+    parent: FormGroup;    
+
+    // TABLE STRUCTURE (AND FORM)
+    displayedColumns = ['runName', 'subRun', 'setUpFunctionName', 'param1', 'param2', 'param3', 'param4', 'param5', 'param6'];
+    dataSource = new BehaviorSubject<AbstractControl[]>([]);
+
+    runDefinitionForm: FormGroup;
+
+    // INITIALIZATION
+    constructor(
+        private inputService: InputsService, 
+        private store: Store,
+        private notifyService: NotificationService,
+        private fb: FormBuilder) { }   
+
+    ngOnInit() {
+        this.buildForm();
+        this.store.dispatch(new GetExistingInputs('RunDefinition'));
+        this.runDefinitionEntries$.subscribe((entries) => {
+            // reset form before adding rows
+            this.buildForm();
+            this.addRows(entries);
+        });
+    }
+
+    buildForm() {
+        this.runDefinitionForm =  this.fb.group({
+             'runDefinitions': this.fb.array([])
+        });
+    }
+
+    get runDefinitionFormEntries(): FormArray {
+        return this.runDefinitionForm.get('runDefinitions') as FormArray;
+    }
+
+    //// SUBMIT FORM (ADD NEW KERNEL CONFIG)
+    //createRunDefinition({value, valid} : {value : FormGroup , valid: boolean}){        
+    //    let runDefinitionEntries = this.mapFormToModel();
+    //    let name = this.nameControl.value;
+    //    this.store
+    //        .dispatch(new CreateRunDefinition(name, runDefinitionEntries))
+    //        .subscribe(
+    //            (success) => this.nameControl.setValue(''),
+    //            (error) => console.log("Error occured")
+    //        );
+    //}
+
+    addRows(runDefinitionEntries: RunDefinitionDto[]) {
+        runDefinitionEntries.forEach((runDefinition) => this.addRow(runDefinition));  
+        this.dataSource.next(this.runDefinitionFormEntries.controls);
+    }
+
+    addRow(runDefinitionDto: RunDefinitionDto) {
+        this.runDefinitionFormEntries.push(
+            this.fb.group({
+                'runName': [runDefinitionDto.runName, Validators.required],
+                'subRun': [runDefinitionDto.subRun, Validators.required],
+                'setUpFunctionName': [runDefinitionDto.setUpFunctionName, Validators.required],
+                'param1': [runDefinitionDto.param1, Validators.required],
+                'param2': [runDefinitionDto.param2],
+                'param3': [runDefinitionDto.param3],
+                'param4': [runDefinitionDto.param4],
+                'param5': [runDefinitionDto.param5],
+                'param6': [runDefinitionDto.param6]
+            })
+       );  
+    }
+
+    // REORDER ROWS (DRAG AND DROP)
+    onListDrop(event: CdkDragDrop<string[]>) {
+        moveItemInArray(this.runDefinitionFormEntries.controls, event.previousIndex, event.currentIndex);
+        moveItemInArray(this.runDefinitionFormEntries.value, event.previousIndex, event.currentIndex);
+        this.dataSource.next(clonedeep(this.runDefinitionFormEntries.controls));
+    }
+
+    // HELPER FUNCTIONS
+    mapFormToModel(): RunDefinitionDto[] {
+        let result: RunDefinitionDto[] = [];
+        for(let i = 0; i < this.runDefinitionFormEntries.length; ++i)
+        {
+            let control = this.runDefinitionFormEntries.at(i) as FormGroup;
+            result.push(RunDefinitionDto.fromJS(control.value));
+        }     
+        return result;
+    }    
+}
+
+
+
+<input-form [inputType]="'RunDefinition'"
+            [inputForm]="runDefinitionForm">
+    <div *ngIf="runDefinitionForm" [formGroup]="runDefinitionForm" ngxsForm="runDefinitionForm.details">
+        <!-- CHECK OUT THIS https://stackblitz.com/edit/angular-5xyj9d?file=src%2Fapp%2Fapp.component.ts 
+            {{(form$ | async) | json}}
+        -->
+        <mat-table *ngIf="dataSource" #table cdkDropList
+                   [dataSource]="dataSource"
+                   [cdkDropListData]="dataSource"
+                   (cdkDropListDropped)="onListDrop($event)"
+                   formArrayName="runDefinitions">
+
+            <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; let i = index; columns: displayedColumns;" cdkDrag></mat-row>
+
+            <ng-container matColumnDef="runName">
+                <mat-header-cell *matHeaderCellDef> RunName </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="runName">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="subRun">
+                <mat-header-cell *matHeaderCellDef> SubRun </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="subRun">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="setUpFunctionName">
+                <mat-header-cell *matHeaderCellDef> SetUpFunctionName </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="setUpFunctionName">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param1">
+                <mat-header-cell *matHeaderCellDef> Param1 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param1">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param2">
+                <mat-header-cell *matHeaderCellDef> Param2 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param2">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param3">
+                <mat-header-cell *matHeaderCellDef> Param3 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param3">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param4">
+                <mat-header-cell *matHeaderCellDef> Param4 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param4">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param5">
+                <mat-header-cell *matHeaderCellDef> Param5 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param5">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param6">
+                <mat-header-cell *matHeaderCellDef> Param6 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param6">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+        </mat-table>
+    </div>
+</input-form>
+<!--<ng-template #runDefinition>
+    <div *ngIf="runDefinitionForm" [formGroup]="runDefinitionForm" ngxsForm="runDefinitionForm.details">
+        <mat-table *ngIf="dataSource" #table cdkDropList
+                   [dataSource]="dataSource"
+                   [cdkDropListData]="dataSource"
+                   (cdkDropListDropped)="onListDrop($event)"
+                   formArrayName="runDefinitions">
+
+            <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; let i = index; columns: displayedColumns;" cdkDrag></mat-row>
+
+            <ng-container matColumnDef="runName">
+                <mat-header-cell *matHeaderCellDef> RunName </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="runName">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="subRun">
+                <mat-header-cell *matHeaderCellDef> SubRun </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="subRun">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="setUpFunctionName">
+                <mat-header-cell *matHeaderCellDef> SetUpFunctionName </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="setUpFunctionName">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param1">
+                <mat-header-cell *matHeaderCellDef> Param1 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param1">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param2">
+                <mat-header-cell *matHeaderCellDef> Param2 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param2">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param3">
+                <mat-header-cell *matHeaderCellDef> Param3 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param3">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param4">
+                <mat-header-cell *matHeaderCellDef> Param4 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param4">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param5">
+                <mat-header-cell *matHeaderCellDef> Param5 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param5">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="param6">
+                <mat-header-cell *matHeaderCellDef> Param6 </mat-header-cell>
+                <mat-cell *matCellDef="let element; let index = index" [formGroupName]="index">
+                    <mat-form-field floatLabel="never">
+                        <input matInput placeholder="NULL" formControlName="param6">
+                    </mat-form-field>
+                </mat-cell>
+            </ng-container>
+        </mat-table>
+    </div>
+</ng-template>-->
+
+
+.mat-form-field {
+    font-size: 14px;
+    display:block;
+}
+
+.mat-table {
+    overflow: auto;
+}
+
+.mat-form-field.filter {
+    float: none;
+    margin: auto;
+    width: 30%;
+    padding-top: 20px;
+    padding-bottom: 5px; 
+}

@@ -1,0 +1,115 @@
+.form-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-right: 1px solid black;
+}
+
+.existing-inputs-wrapper {
+}
+
+.prefill-wrapper {
+    padding-left: 100px !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.form-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 85px;
+}
+
+.name-field-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-right: 1px solid black;
+    width: 70%;
+}
+
+.form-error {
+    width: 20px;
+    color: red;
+}
+
+.menu-item {
+    position: absolute;
+}
+
+.add-button-menu {
+    display: flex;
+    align-items: center;
+    right: 0;
+}
+
+.add-button-menu-expanded {
+    height: 100px;
+    border: 10px;
+    padding: 20px;
+}
+
+.add-button-menu-collapsed {
+    height: 100px;
+    border: 10px;
+    padding: 20px;
+}
+
+.settings-panel-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-bottom: 1px solid #445866;
+    height: 15%;
+    position: relative;
+}
+
+.fields-container {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.margin-center {
+    width: 70%;
+    margin: auto;
+}
+
+.global-fields section {
+}
+
+.section-header {
+    padding-left: 50px;
+    padding-top: 30px;
+    margin-bottom: 30px;
+}
+
+.section-header-title {
+    font-size: 1.3em;
+    font-weight: bolder;
+    margin-bottom: 5px;
+    color: #445866;
+}
+
+.section-header-description {
+    font-size: smaller;
+    font-weight: bold;
+    color: #7c909c;
+}
+
+.section-body {
+}
+
+/* ----- divider ----- */
+.fields-container .mat-divider {
+    width: 95%;
+    margin: auto;
+    margin-top: 60px;
+}
+
+
+/* ------ form control headers ----- */
+.form-controls-header {
+    margin-top: 20px;
+}

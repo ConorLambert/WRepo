@@ -1,0 +1,186 @@
+<form [formGroup]="kernelConfigAlvForm" ngxsForm="kernelConfigAlv.form" *ngIf="kernelConfigAlvViewModel$ | async as kernelConfigAlvViewModel" style="height:100%">
+    <div class="form-container">
+        <div class="form-header" *ngIf="selectedRunTypeIds$ | async as selectedRunTypeIds">
+            <div class="name-field-wrapper">
+                <mat-form-field>
+                    <input matInput type="text" [formControl]="nameFormControl" placeholder="Enter name ...">
+                    <mat-error *ngIf="nameFormControl.hasError('duplicateName')">
+                        This name already exists
+                    </mat-error>
+                </mat-form-field>
+                <button mat-button *ngIf="!isSelectedFieldsMode" matTooltip="Create form data and apply to current selection" (click)="submit()" [disabled]="nameFormControl.invalid || kernelConfigAlvForm.invalid || nameFormControl.pending || kernelConfigAlvForm.pending || selectedRunTypeIds.length === 0 || !auth.ConfigurationCreator"><mat-icon>done</mat-icon></button>
+                <button mat-button *ngIf="isSelectedFieldsMode" matTooltip="Create selected fields data and apply to current selection" (click)="submitSelectedFields()" [disabled]="nameFormControl.invalid || kernelConfigAlvForm.invalid || nameFormControl.pending || kernelConfigAlvForm.pending || selectedRunTypeIds.length === 0 || !auth.ConfigurationCreator"><mat-icon>done</mat-icon></button>
+                <span class="form-error">
+                    <mat-icon *ngIf="kernelConfigAlvForm.hasError('duplicateData')"
+                              matTooltip="Duplicate data: {{kernelConfigAlvForm.errors['duplicateData']}}"
+                              class="status-error">
+                        error
+                    </mat-icon>
+                </span>
+            </div>
+            <div class="prefill-wrapper">
+                <mat-form-field class="existing-inputs-wrapper" appearance="outline">
+                    <select matNativeControl [formControl]="selectedKernelConfigAlvOptionControl">
+                        <option *ngFor="let existingInputs of existingInputs$ | async | keyvalue:orderByFileName" [value]="existingInputs.key">
+                            {{ existingInputs.value }}
+                        </option>
+                    </select>
+                </mat-form-field>
+                <button mat-button
+                        matTooltip="Apply current selection"
+                        (click)="addCurrentSelection()"
+                        [disabled]="!(selectedKernelConfigAlvOptionControl.value && selectedKernelConfigAlvOptionControl.value > 0) || selectedRunTypeIds.length === 0 || !auth.ConfigurationCreator">
+                    <mat-icon>add</mat-icon>
+                </button>
+            </div>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="menu-item">
+            <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Actions">
+                <mat-icon>menu</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu">
+                <button mat-menu-item (click)="getCommonSettings()" [disabled]="!canEnableMenuItems()">
+                    <span>Get Common Settings</span>
+                </button>
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="clearForm()">
+                    <span>Clear Form</span>
+                </button>
+            </mat-menu>
+        </div>
+        <div class="fields-container">
+            <div class="form-controls-header section-body margin-center">
+                <form-field [control]="willSubmitControl('globalConfigRunInParallel')" [name]="'Run In Parallel'" [hideCheckbox]="true" [hideName]="true">
+                    <mat-checkbox (change)="toggleAllWillSubmit($event)" [checked]="true">Fields to Submit</mat-checkbox>
+                </form-field>
+            </div>
+            <div class="section-header margin-center">
+                <div class="section-header-title">Global Configuration</div>
+                <div class="section-header-description">Configurations applied to all individual products</div>
+            </div>
+            <div class="section-body margin-center">
+                <form-field [control]="willSubmitControl('globalConfigRunInParallel')" [name]="'Run In Parallel'">
+                    <mat-checkbox matInput formControlName="globalConfigRunInParallel"></mat-checkbox>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalConfigProjectionType')" [name]="'Projection Type'">
+                    <select-form-field [control]="control('globalConfigProjectionType')" [options]="kernelConfigAlvViewModel.optionsGlobalConfigProjectionType"></select-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalConfigProjectionDurationInMonths')" [name]="'Projection Duration In Months'">
+                    <input-form-field [control]="control('globalConfigProjectionDurationInMonths')" [type]="'number'"></input-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalConfigNumberOfSimulations')" [name]="'Number Of Simulations'">
+                    <input-form-field [control]="control('globalConfigNumberOfSimulations')" [type]="'number'"></input-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalConfigNumberOfProcessors')" [name]="'Number Of Processors'">
+                    <input-form-field [control]="control('globalConfigNumberOfProcessors')" [type]="'number'"></input-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalConfigSimBlockSize')" [name]="'Sim Block Size'">
+                    <input-form-field [control]="control('globalConfigSimBlockSize')" [type]="'number'"></input-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalMultiProcessingInfoBlockSize')" [name]="'Global Block Size'">
+                    <input-form-field [control]="control('globalMultiProcessingInfoBlockSize')" [type]="'text'"></input-form-field>
+                </form-field>
+            </div>
+            <mat-divider></mat-divider>
+            <div class="section-header margin-center">
+                <div class="section-header-title">Global Result</div>
+                <div class="section-header-description">Output settings applied to all individual products</div>
+            </div>
+            <div class="section-body margin-center">
+                <form-field [control]="willSubmitControl('globalResultPortfolioSubLevel')" [name]="'Portfolio Sub Level'">
+                    <input-form-field [control]="control('globalResultPortfolioSubLevel')" [type]="'text'"></input-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalResultOutputTarget')" [name]="'Output Target'">
+                    <select-form-field [control]="control('globalResultOutputTarget')" [options]="kernelConfigAlvViewModel.optionsGlobalResultOutputTarget"></select-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('globalResultProjectionOutputMonths')" [name]="'Projection Output Months'">
+                    <output-months-form-field [control]="control('globalResultProjectionOutputMonths')"></output-months-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('resultDebugSimulationNumber')" [name]="'Debug Simulation Number'">
+                    <input-form-field [control]="control('resultDebugSimulationNumber')" [type]="'number'"></input-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('resultLevel')" [name]="'Level'">
+                    <select-form-field [control]="control('resultLevel')" [options]="kernelConfigAlvViewModel.optionsResultLevel"></select-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('resultSubLevel')" [name]="'Sub Level'">
+                    <select-form-field [control]="control('resultSubLevel')" [options]="kernelConfigAlvViewModel.optionsResultSubLevel"></select-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('resultSummaryOutputVariables')" [name]="'Summary Output Variables'">
+                    <output-variables-form-field [control]="control('resultSummaryOutputVariables')"></output-variables-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('resultDetailedOutputVariables')" [name]="'Detailed Output Variables'">
+                    <output-variables-form-field [control]="control('resultDetailedOutputVariables')"></output-variables-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('resultDebugOutputVariables')" [name]="'Debug Output Variables'">
+                    <output-variables-form-field [control]="control('resultDebugOutputVariables')"></output-variables-form-field>
+                </form-field>
+            </div>
+            <mat-divider></mat-divider>
+            <div class="section-header margin-center">
+                <div class="section-header-title">Sub Configuration</div>
+                <div class="section-header-description">Configurations applied to a sub-product</div>
+            </div>
+            <div class="section-body margin-center">
+                <form-field (toggleWillSubmit)="toggleWillSubmit('resultMultiProcessingInfo')" [control]="willSubmitControl('resultMultiProcessingInfo')" [name]="'Block Size'">
+                    <input-form-field [control]="control('resultMultiProcessingInfo')" [type]="'text'"></input-form-field>
+                </form-field>
+            </div>
+            <mat-divider></mat-divider>
+            <!--(LIABILITY ONLY)-->
+            <div class="liability-fields-wrapper" *ngIf="control('globalConfigProjectionType').value !== 'AssetOnly'">
+                <div class="liability-fields section-header margin-center">
+                    <div class="section-header-title">Liabilities</div>
+                    <div class="section-header-description">Apply liability settings</div>
+                </div>
+                <div class="section-body margin-center">
+                    <form-field [control]="willSubmitControl('resultDetailedLiabilityGroupingPropertyName')" [name]="'Detailed Liability Grouping Property'">
+                        <input-form-field [control]="control('resultDetailedLiabilityGroupingPropertyName')" [type]="'text'"></input-form-field>
+                    </form-field>
+                    <form-field [control]="willSubmitControl('resultDebugLiabilityProperty')" [name]="'Debug Liability Property'">
+                        <input-form-field [control]="control('resultDebugLiabilityProperty')" [type]="'text'"></input-form-field>
+                    </form-field>
+                    <form-field [control]="willSubmitControl('resultDebugLiabilityValue')" [name]="'Debug Liability Value'">
+                        <input-form-field [control]="control('resultDebugLiabilityValue')" [type]="'text'"></input-form-field>
+                    </form-field>
+                </div>
+                <mat-divider></mat-divider>
+            </div>
+            <!--(ASSET ONLY)-->
+            <div class="asset-fields-wrapper" *ngIf="control('globalConfigProjectionType').value !== 'LiabilityOnly'">
+                <div class="asset-fields section-header margin-center">
+                    <div class="section-header-title">Asset</div>
+                    <div class="section-header-description">Apply asset settings</div>
+                </div>
+                <div class="section-body margin-center">
+                    <form-field [control]="willSubmitControl('resultDebugAssetProperty')" [name]="'Debug Asset Property'">
+                        <input-form-field [control]="control('resultDebugAssetProperty')" [type]="'text'"></input-form-field>
+                    </form-field>
+                    <form-field [control]="willSubmitControl('resultDebugAssetValue')" [name]="'Debug Asset Value'">
+                        <input-form-field [control]="control('resultDebugAssetValue')" [type]="'text'"></input-form-field>
+                    </form-field>
+                </div>
+                <mat-divider></mat-divider>
+            </div>
+            <!----- Management ----->
+            <div class="asset-fields section-header margin-center">
+                <div class="section-header-title">Management</div>
+                <div class="section-header-description">Apply management settings</div>
+            </div>
+            <div class="section-body margin-center">
+                <form-field [control]="willSubmitControl('managementInvestmentInteractionFrequencyString')" [name]="'Interaction Frequency String'">
+                    <select-form-field [control]="control('managementInvestmentInteractionFrequencyString')" [options]="kernelConfigAlvViewModel.optionsManagementInvestmentInteractionFrequencyString"></select-form-field>
+                </form-field>
+                <form-field [control]="willSubmitControl('managementInvestmentCalculationExecutionId')" [name]="'Calculation Execution'" *ngIf="control('managementInvestmentInteractionFrequencyString').value !== 'NONE'">
+                    <mat-form-field appearance="outline">
+                        <select matNativeControl formControlName="managementInvestmentCalculationExecutionId">
+                            <option *ngFor="let existingInputs of kernelConfigAlvViewModel.calculationExecutionExistingInputs | keyvalue:orderByFileName" [value]="existingInputs.key">
+                                {{ existingInputs.value }}
+                            </option>
+                        </select>
+                    </mat-form-field>
+                </form-field>
+            </div>
+        </div>
+    </div>
+</form>

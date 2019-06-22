@@ -1,0 +1,354 @@
+import { Select, Store } from "@ngxs/store";
+import { Dispatch } from "@ngxs-labs/dispatch-decorator";
+import { Observable, BehaviorSubject } from "rxjs";
+import { InputsService, CreateConfigurationAlvViewModel, CreateConfigurationAlvCommand, RunDefinitionAlvViewModel, RunDefinitionAlvDto, ConfigRunDefinitionAlvDto, CreateRunDefinitionAlvCommand, FileParameter, IdNameDto } from "ClientApp/core/services/api.client.generated";
+import { Injectable } from "@angular/core";
+import { map, finalize } from "rxjs/operators";
+import { NotificationService } from "ClientApp/app/services/notification.service";
+import { ActivatedRoute } from "@angular/router";
+import { RunDefinitionAlvStateModel, RunDefinitionAlvState } from "./run-definition-alv.state";
+import { CreateConfigurationShared } from "../../create-configuration.shared";
+import { SetRunDefinitionAlvViewModel, UpdateRunDefinitionAlvForm, UpdateConfigRunDefinitionAlvEntries, UpdateDroppedRunDefinitionFilesAlv, SetAvailableRunDefinitionFiles } from "./run-definition-alv.action";
+import { ModelParamTypes } from 'ClientApp/app/shared/constants';
+import { SelectedCell } from "../inputs-grid/inputs-grid.model";
+import { AddOptionAlv, SetRunDefinitionHasChanged } from '../create-configuration-alv.action';
+import { InputsGridState } from "../inputs-grid/inputs-grid.state";
+import { WebApiPreProcessingService } from "ClientApp/app/configurations/create-configuration/services/web-api-pre-processing.service";
+import { CreateConfigurationAlvState } from "../create-configuration-alv.state";
+import { StateReset } from "ngxs-reset-plugin";
+import { BaseFacade } from "../base-alv/base-alv.facade";
+import { FileEntry } from "../inputs/inputs-files/inputs-files.model";
+
+@Injectable({ 
+    providedIn: 'root'
+})
+export class RunDefinitionAlvFacade implements BaseFacade<ConfigRunDefinitionAlvDto> {
+
+    @Select(RunDefinitionAlvState)
+    public stateModel$: Observable<RunDefinitionAlvStateModel>;
+
+    public fileEntries: FileEntry[] = [];
+    public fileEntriesSubject =  new BehaviorSubject<FileEntry[]>([]);
+
+    constructor(
+        private inputService: InputsService,
+        private notify: NotificationService,
+        private createConfigurationShared: CreateConfigurationShared,
+        private route: ActivatedRoute,
+        private store: Store
+    ) { }
+    
+    @Dispatch()
+    getRunDefinitionAlvViewModel = () =>
+        this.inputService
+            .getRunDefinitionAlvViewModel(this.createConfigurationShared.runGroupId)
+            .subscribe((result: RunDefinitionAlvViewModel) => {
+                this.store.dispatch(new SetRunDefinitionAlvViewModel(result));
+                let newRunDefinitionFiles = result.runDefinitionFiles.map(x => new FileEntry(x.name, null, x.id));
+                this.store.dispatch(new SetAvailableRunDefinitionFiles(newRunDefinitionFiles));
+            });
+    
+    @Dispatch()
+    getRunDefinitionAlv = (modelParamId: number) =>
+        this.inputService
+            .getRunDefinitionAlv(modelParamId)
+            .subscribe(
+                (result: RunDefinitionAlvDto[]) => {
+                    this.store.dispatch(new UpdateRunDefinitionAlvForm(result));
+                },
+                error => this.notify.showError(error.response, "Error Occured")
+            );
+
+    getRunDefinitionFiles() {
+        this.inputService
+            .getRunDefinitionFilesAlv()
+            .subscribe(
+                (result: IdNameDto[]) => {
+                    let newRunDefinitionFiles = result.map(x => new FileEntry(x.name, null, x.id));
+                    this.store.dispatch(new SetAvailableRunDefinitionFiles(newRunDefinitionFiles));
+                },
+                error => this.notify.showError(error.response, "Error Occured")
+            );
+    }
+
+    createRunDefinition(inputName: string, inputData: RunDefinitionAlvDto[]): Observable<RunDefinitionAlvDto[]> {
+        let command = new CreateRunDefinitionAlvCommand({name: inputName, inputData: inputData});
+        return this.inputService
+            .createRunDefinitionAlv(command)
+            .pipe(
+                map((createdEntry) => {
+                    let modelParamId = createdEntry.pop().modelParamId;
+                    this.store.dispatch(new AddOptionAlv(modelParamId, inputName, ModelParamTypes.RunDefinition));
+                    this.addSelectionRunDefinitionAlv(modelParamId);
+                    this.notify.showSuccess("Input added successfully !!", "Notification")
+                    return createdEntry;
+                })
+            );
+    }
+
+    deleteDuplicateRunDefinitionFiles = () => {
+        let newFileEntries = this.fileEntries.filter(x => !x.isDuplicate);
+        return this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv(newFileEntries));
+    }
+
+    //@Dispatch()
+    addSelectionRunDefinitionAlv = (modelParamId: number) => {
+        let configSetEntries = this.configSetEntries();
+        this.selectedCells.forEach((selectedCell: SelectedCell) => {
+            // check if this entry already exists in configSetEntries
+            let entry = this.findEntryInConfigSetEntries(selectedCell);
+            if (entry != undefined) {
+                entry.modelParamId = modelParamId;
+            } else {
+                let newConfigSetEntry = new ConfigRunDefinitionAlvDto();
+                newConfigSetEntry.modelParamId = modelParamId;
+                newConfigSetEntry.productId = selectedCell.productId;
+                newConfigSetEntry.assetGroupId = selectedCell.assetGroupId;
+                newConfigSetEntry.runTypeId = selectedCell.runTypeId;
+                configSetEntries.push(newConfigSetEntry);
+            }
+        });
+        this.store.dispatch([
+            new UpdateConfigRunDefinitionAlvEntries(configSetEntries),
+            new SetRunDefinitionHasChanged()
+        ]);
+        this.notify.showSuccess("Selection added successfully !!", "")
+    }
+
+    onFilesAdded(addedFiles) {
+        let indexesToCheck: number[] = [];
+        for (let key in addedFiles) {
+            if (!isNaN(parseInt(key))) {
+                let file = addedFiles[key];
+                // if not already added
+                if (!this.fileEntries.some(x => x.name === file.name)) {
+                    let newFileEntry = new FileEntry(file.name, file);
+                    let index = this.fileEntries.push(newFileEntry) - 1;
+                    // check duplicate name
+                    indexesToCheck.push(index);
+                }
+            }
+        }
+        //this.fileEntriesSubject.next(this.fileEntries);
+        this.store
+            .dispatch(new UpdateDroppedRunDefinitionFilesAlv(this.fileEntries))
+            .subscribe(x => {
+                this.fileChecks(indexesToCheck);
+            });
+    }
+
+    resetFileEntries() {
+        this.fileEntries = [];
+        this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv(this.fileEntries));
+        this.fileEntriesSubject.next(this.fileEntries);
+    }
+
+    toggleDeletion = (entry: ConfigRunDefinitionAlvDto) => {
+        let targetEntry = this.configSetEntries().find(x => x == entry);
+        targetEntry.isDeleted = !entry.isDeleted;
+        this.store.dispatch([
+            new UpdateConfigRunDefinitionAlvEntries(this.configSetEntries()),
+            new SetRunDefinitionHasChanged()
+        ]);
+    }
+
+    resetState = () => {
+        this.store.dispatch(
+            new StateReset(RunDefinitionAlvState)
+        );
+    }
+    
+    // ------------------------ HELPER FUNCTIONS -----------------------
+
+    findEntryInConfigSetEntries(selectedCell: SelectedCell): ConfigRunDefinitionAlvDto {
+        return this.configSetEntries().find(x =>
+            x.productId === selectedCell.productId &&
+            x.assetGroupId === selectedCell.assetGroupId &&
+            x.runTypeId === selectedCell.runTypeId
+        );
+    }
+
+    get runDefinitionConfigSetId() {
+        return this.store.selectSnapshot(CreateConfigurationAlvState.runDefinitionConfigSetId);
+    }
+
+    configSetEntries() {
+        return this.store.selectSnapshot(RunDefinitionAlvState.configSetEntries);
+    }
+
+    configSetEntriesToBeSubmitted() {
+        return this.store.selectSnapshot(RunDefinitionAlvState.configSetEntriesToBeSubmitted);
+    }
+
+    get selectedCells(): SelectedCell[] {
+        return this.store.selectSnapshot(InputsGridState.selectedCells)
+    }
+
+
+
+    //@Dispatch()
+    getDuplicateFile = (fileEntryIndex: number) => {
+        let fileEntry = this.fileEntries[fileEntryIndex];
+        let formData = this.createFormData(fileEntry);
+        this.inputService
+            .doesRunDefinitionAlvDataExist(formData)
+            .subscribe(
+                (file: IdNameDto) =>
+                {
+                    if (file) {
+                        fileEntry.isCheckingDuplicate = false;
+                        fileEntry.isDuplicate = true;
+                        fileEntry.duplicateRunDefinitionFile = file;
+                        this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv(this.fileEntries))
+                    } else {
+                        fileEntry.isCheckingDuplicate = false;
+                        fileEntry.isDuplicate = false;
+                        this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv(this.fileEntries))
+                    }
+                }
+            );
+    }
+
+    //@Dispatch()
+    doesInputFileNameExist = (fileEntryIndex: number) => {
+        let fileEntry = this.fileEntries[fileEntryIndex];
+        let fileName = fileEntry.name;
+        this.inputService
+            .doesInputNameExist(ModelParamTypes.RunDefinitionAlv, fileName)
+            .subscribe(
+                (isDuplicateName) => {
+                    if (isDuplicateName) {
+                        fileEntry.isValid = false;
+                        fileEntry.fileNameAlreadyExists = true;
+                    } else {
+                        fileEntry.fileNameAlreadyExists = false;
+                    }
+                    this.fileEntriesSubject.next(this.fileEntries);
+                },
+                error => {
+                    this.notify.showError("Error occured, check log for details", "")
+                }
+            );
+    }
+
+    //@Dispatch()
+    addFileToEntries = (file: File) => {
+        let fileEntry = new FileEntry(file.name, file);
+        let index = this.fileEntries.push(fileEntry) - 1;
+        //this.store.dispatch(new UpdateFileEntries(this.fileEntries));
+        this.fileEntriesSubject.next(this.fileEntries);
+        // check if this file is a duplicate of one that already exists
+        return this.fileChecks([index]);
+    }
+
+    //createRunDefinitionAlvFiles = () => {
+    //    let allFileEntries = this.fileEntries;
+    //    let fileEntriesToCreate = allFileEntries.filter(x => !x.isPersisted);
+    //    let alreadyPersistedFileEntries = allFileEntries.filter(x => x.isPersisted);
+    //    let formData = fileEntriesToCreate.map(fileEntry => this.createInputFilesFormData(fileEntry));
+    //    this.inputService
+    //        .createInputs(formData)
+    //        .subscribe(
+    //            (createdInputFiles: InputFileDto[]) => {
+    //                let fileEntriesCreated = [];
+    //                createdInputFiles.forEach(createdInputFile => 
+    //                    fileEntriesCreated.push(this.addInputFile(createdInputFile)));
+    //                this.store.dispatch(new UpdateFileEntries([...alreadyPersistedFileEntries, ...fileEntriesCreated]))
+    //                // this will relfect any UI components that are subscribed to input files
+    //                this.store.dispatch(new AddInputFilesToAvailableInputFiles(createdInputFiles));
+    //                this.notify.showSuccess("Files Uploads Successfully", "Complete");
+    //            },
+    //            error => this.notify.showError("An error has occured", "Error")
+    //        );
+    //}
+    
+    //@Dispatch()
+    renameRunDefinitionFile = (index: number, newFileName: string) => {
+        let targetEntry = this.fileEntries[index];
+        targetEntry.name = newFileName + ".xml";
+        this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv(this.fileEntries));
+        this.fileEntriesSubject.next(this.fileEntries);
+        return this.doesInputFileNameExist(index);
+    }
+
+    //@Dispatch()
+    createRunDefinitionFile = (index: number) => {
+        let fileEntry = this.fileEntries[index];
+        let formData = this.createRunDefinitionFilesFormData(fileEntry);
+        this.inputService
+            .createRunDefinitionFromFileAlv(formData)
+            .subscribe(
+                (createdRunDefinitionData: RunDefinitionAlvDto[]) => {
+                    fileEntry.modelParamId = createdRunDefinitionData.pop().modelParamId;
+                    fileEntry.isPersisted = true;
+                    fileEntry.isValid = true;
+                    this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv(this.fileEntries));
+                    this.fileEntriesSubject.next(this.fileEntries);
+                    this.getRunDefinitionFiles();
+                    this.notify.showSuccess("Files Uploaded Successfully", "Complete");
+                },
+                error => this.notify.showError("An error has occured", "Error")
+            );
+    }
+
+    //@Dispatch()
+    createRunDefinitionFiles = () => {
+        let allFileEntries = this.fileEntries;
+        let fileEntriesToCreate = allFileEntries.filter(x => !x.isPersisted);
+        let alreadyPersistedFileEntries = allFileEntries.filter(x => x.isPersisted);
+        let formData = fileEntriesToCreate.map(fileEntry => this.createRunDefinitionFilesFormData(fileEntry));
+        this.inputService
+            .createMultipleRunDefinitionsFromFilesAlv(formData)
+            .subscribe(
+                (success) => {
+                    let fileEntriesCreated = [];
+                    fileEntriesToCreate.forEach(createdInputFile => {
+                        fileEntriesCreated.push(this.setFilesAsCreated(createdInputFile));
+                        // this will relfect any UI components that are subscribed to input files
+                    });
+                    this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv([
+                        ...alreadyPersistedFileEntries, ...fileEntriesCreated
+                    ]));
+                    // multiple files where added so refresh available list
+                    this.getRunDefinitionFiles();
+                    this.notify.showSuccess("Files Uploads Successfully", "Complete");
+                },
+                error => this.notify.showError("An error has occured", "Error")
+            );
+    }
+
+    deleteRunDefinitionFile(fileEntryIndex: number) {
+        this.fileEntries.splice(fileEntryIndex, 1);
+        this.store.dispatch(new UpdateDroppedRunDefinitionFilesAlv(this.fileEntries));
+        this.fileEntriesSubject.next(this.fileEntries);
+    }
+
+    createFormData(fileEntry: FileEntry): FileParameter {
+        let formData = {} as FileParameter;
+        formData.fileName = fileEntry.name;
+        formData.data = fileEntry.file;
+        return formData;
+    }
+
+    // stuff the inputNameId value into the filename to be parsed on the other side
+    createRunDefinitionFilesFormData(fileEntry: FileEntry): FileParameter {
+        var formData = this.createFormData(fileEntry);
+        formData.fileName = fileEntry.name; //file.name;
+        return formData;
+    }
+
+    setFilesAsCreated(fileEntry: FileEntry): FileEntry {
+        fileEntry.isValid = true;
+        fileEntry.isCheckingDuplicate = false;
+        fileEntry.isPersisted = true;
+        //fileEntry.inputNameId = inputFile.inputNameId;
+        return fileEntry;
+    }
+
+    fileChecks(fileEntryIndexes: number[]) {
+        fileEntryIndexes.forEach(fileEntryIndex => {
+            this.getDuplicateFile(fileEntryIndex);
+            this.doesInputFileNameExist(fileEntryIndex);
+        });
+    }
+}

@@ -1,0 +1,232 @@
+import { Select, Store } from "@ngxs/store";
+import { Dispatch } from "@ngxs-labs/dispatch-decorator";
+import { Observable } from "rxjs";
+import { InputsService, CreateConfigurationAlvViewModel, CreateConfigurationAlvCommand, KernelConfigAlvViewModel, KernelConfigAlvDto, CreateKernelConfigAlvCommand, ConfigKernelConfigAlvDto, CreateKernelConfigSelectedFieldsAlvCommand } from "ClientApp/core/services/api.client.generated";
+import { Injectable } from "@angular/core";
+import { map, finalize } from "rxjs/operators";
+import { NotificationService } from "ClientApp/app/services/notification.service";
+import { ActivatedRoute } from "@angular/router";
+import { KernelConfigAlvStateModel, KernelConfigAlvState } from "./kernel-config-alv.state";
+import { CreateConfigurationShared } from "../../create-configuration.shared";
+import { SetKernelConfigAlvViewModel, UpdateKernelConfigAlvForm, UpdateConfigKernelConfigAlvEntries } from "./kernel-config-alv.action";
+import { ModelParamTypes } from 'ClientApp/app/shared/constants';
+import { SelectedCell } from "../inputs-grid/inputs-grid.model";
+import { AddOptionAlv, SetKernelConfigHasChanged, SetOptionAlv, SetExistingInputsAlv } from '../create-configuration-alv.action';
+import { InputsGridState } from "../inputs-grid/inputs-grid.state";
+import { WebApiPreProcessingService } from "ClientApp/app/configurations/create-configuration/services/web-api-pre-processing.service";
+import { CreateConfigurationAlvState } from "../create-configuration-alv.state";
+import { StateReset } from "ngxs-reset-plugin";
+import { BaseFacade } from "../base-alv/base-alv.facade";
+import { CreateConfigurationAlvFacade } from "../create-configuration-alv.facade";
+
+@Injectable({ 
+    providedIn: 'root'
+})
+export class KernelConfigAlvFacade implements BaseFacade<ConfigKernelConfigAlvDto> {
+
+    @Select(KernelConfigAlvState)
+    public stateModel$: Observable<KernelConfigAlvStateModel>;
+
+    constructor(
+        private inputService: InputsService,
+        private notify: NotificationService,
+        private route: ActivatedRoute,
+        private createConfigurationShared: CreateConfigurationShared,
+        private webApiPreProcessingService: WebApiPreProcessingService,
+        private store: Store
+    ) { }
+    
+    @Dispatch()
+    getKernelConfigAlvViewModel = () =>
+        this.inputService
+            .getKernelConfigAlvViewModel(this.createConfigurationShared.runGroupId)
+            .subscribe((result: KernelConfigAlvViewModel) => {
+                this.store.dispatch(new SetKernelConfigAlvViewModel(result));
+            });
+    
+    @Dispatch()
+    getKernelConfigAlv = (modelParamId: number) =>
+        this.inputService
+            .getKernelConfigAlv(modelParamId)
+            .subscribe(
+                (result: KernelConfigAlvDto) => {
+                    this.store.dispatch(new UpdateKernelConfigAlvForm(result));
+                },
+                error => this.notify.showError(error.response, "Error Occured")
+            );
+
+    @Dispatch()
+    getCommonKernelConfigSettingsAlv = () => {
+        const selectedProductIds = this.convertToCommaDelimited(this.onlyUnique('productId'));
+        const selectedAssetGroupsIds = this.convertToCommaDelimited(this.onlyUnique('assetGroupId'));
+        const selectedRunTypeIds = this.convertToCommaDelimited(this.onlyUnique('runTypeId'));
+        return this.inputService
+            .getCommonKernelConfigSettingsAlv(this.kernelConfigConfigSetId, selectedProductIds, selectedAssetGroupsIds, selectedRunTypeIds)
+            .subscribe(
+                (result: KernelConfigAlvDto) => {
+                    this.store.dispatch(new UpdateKernelConfigAlvForm(result));
+                },
+                error => this.notify.showWarning(error.response, "Warning")
+            );
+    }
+
+    createKernelConfig(name: string, inputData: KernelConfigAlvDto): Observable<KernelConfigAlvDto> {
+        let command = new CreateKernelConfigAlvCommand({name, inputData});
+        return this.inputService
+            .createKernelConfigAlv(command)
+            .pipe(
+                map((createdEntry) => {
+                    this.store.dispatch(new AddOptionAlv(createdEntry.modelParamId, name, ModelParamTypes.KernelConfigAlv));
+                    this.store.dispatch(new SetOptionAlv(createdEntry.modelParamId, ModelParamTypes.KernelConfigAlv));
+                    this.addSelectionKernelConfigAlv(createdEntry.modelParamId);
+                    this.notify.showSuccess("Input added successfully !!", "Notification")
+                    return createdEntry;
+                })
+            );
+    }
+
+    createKernelConfigAlt(command: CreateKernelConfigAlvCommand): Observable<KernelConfigAlvDto> {
+        return this.inputService
+            .createKernelConfigAlv(command)
+            .pipe(
+                map((createdEntry) => {
+                    this.store.dispatch(new AddOptionAlv(createdEntry.modelParamId, name, ModelParamTypes.KernelConfigAlv));
+                    this.store.dispatch(new SetOptionAlv(createdEntry.modelParamId, ModelParamTypes.KernelConfigAlv));
+                    this.addSelectionKernelConfigAlv(createdEntry.modelParamId);
+                    this.notify.showSuccess("Input added successfully !!", "Notification")
+                    return createdEntry;
+                })
+            );
+    }
+
+    createKernelConfigSelectFields(name: string, selectedFieldNames: string[], inputData: KernelConfigAlvDto): Observable<any> {
+        let selectedConfigSetEntries = this.getSelectedConfigSetEntries();
+        let command = new CreateKernelConfigSelectedFieldsAlvCommand({name, selectedConfigSetEntries, selectedFieldNames, inputData});
+        return this.inputService
+            .createKernelConfigSelectFieldsAlv(command)
+            .pipe(
+                map((newConfigSetEntries) => {
+                    // number of them added, so get all of them
+                    this.getExistingInputsAlv(ModelParamTypes.KernelConfigAlv);
+                    let configSetEntries = this.configSetEntries();
+                    // check if this entry already exists in configSetEntries
+                    newConfigSetEntries.forEach(
+                        newConfigSetEntry => {
+                            let entry = this.findEntryInConfigSetEntries(newConfigSetEntry);
+                            if (entry) entry.modelParamId = newConfigSetEntry.modelParamId;
+                            else configSetEntries.push(newConfigSetEntry);
+                        }
+                    );
+                    this.store.dispatch([
+                        new UpdateConfigKernelConfigAlvEntries(configSetEntries),
+                        new SetKernelConfigHasChanged()
+                    ]);
+                    this.notify.showSuccess("Settings applied successfully !!", "Notification")
+                    return configSetEntries;
+                })
+            );
+    }
+
+    addSelectionKernelConfigAlv = (modelParamId: number) => {
+        let configSetEntries = this.configSetEntries();
+        this.selectedCells.forEach((selectedCell: SelectedCell) => {
+            // check if this entry already exists in configSetEntries
+            let entry = this.findEntryInConfigSetEntries(selectedCell);
+            if (entry != undefined) {
+                entry.modelParamId = modelParamId;
+            } else {
+                let newConfigSetEntry = new ConfigKernelConfigAlvDto();
+                newConfigSetEntry.modelParamId = modelParamId;
+                newConfigSetEntry.productId = selectedCell.productId;
+                newConfigSetEntry.assetGroupId = selectedCell.assetGroupId;
+                newConfigSetEntry.runTypeId = selectedCell.runTypeId;
+                configSetEntries.push(newConfigSetEntry);
+            }
+        });
+        this.store.dispatch([
+            new UpdateConfigKernelConfigAlvEntries(configSetEntries),
+            new SetKernelConfigHasChanged()
+        ]);
+        this.notify.showSuccess("Selection applied", "");
+    }
+
+    @Dispatch()
+    public getExistingInputsAlv = (inputType: string) =>
+        this.inputService
+        .getExistingConfigurations(inputType)
+        .pipe(
+            map((result) => new SetExistingInputsAlv(inputType, result))
+        );
+
+    toggleDeletion = (entry: ConfigKernelConfigAlvDto) => {
+        let targetEntry = this.configSetEntries().find(x => x == entry);
+        targetEntry.isDeleted = !entry.isDeleted;
+        this.store.dispatch([
+            new UpdateConfigKernelConfigAlvEntries(this.configSetEntries()),
+            new SetKernelConfigHasChanged()
+        ]);
+    }
+
+    resetState = () => {
+        this.store.dispatch(
+            new StateReset(KernelConfigAlvState)
+        );
+    }
+    
+    // ------------------------ HELPER FUNCTIONS -----------------------
+
+    convertToCommaDelimited(finalSelectedItems: number[]) {
+        return this.webApiPreProcessingService
+            .convertNumberArrayToCommaDelimitedList(
+                finalSelectedItems
+            );
+    }
+
+    // in case of product or asset group
+    // if only zeros then devalue to empty array (used on backend)
+    convertOnlyZeroToEmpty(array: number[]): number[] {
+        return array.includes(0) ? [] : array;
+    }
+
+    onlyUnique(name: string) { 
+        return Array.from(new Set(this.selectedCells.map(x => x[name]) as number[]));
+    }
+
+    findEntryInConfigSetEntries(selectedCell): ConfigKernelConfigAlvDto {
+        return this.configSetEntries().find(x =>
+            x.productId === selectedCell.productId &&
+            x.assetGroupId === selectedCell.assetGroupId &&
+            x.runTypeId === selectedCell.runTypeId
+        );
+    }
+
+    getSelectedConfigSetEntries() {
+        let result = [];
+        this.selectedCells.forEach(
+            x => result.push(
+                this.configSetEntries().find(
+                    y => y.productId === x.productId && 
+                         y.runTypeId === x.runTypeId &&
+                         y.assetGroupId === x.assetGroupId
+                )
+            )
+        );
+        return result;
+    }
+
+    get kernelConfigConfigSetId() {
+        return this.store.selectSnapshot(CreateConfigurationAlvState.kernelConfigConfigSetId);
+    }
+
+    configSetEntries() {
+        return this.store.selectSnapshot(KernelConfigAlvState.configSetEntries);
+    }
+
+    configSetEntriesToBeSubmitted() {
+        return this.store.selectSnapshot(KernelConfigAlvState.configSetEntriesToBeSubmitted);
+    }
+
+    get selectedCells(): SelectedCell[] {
+        return this.store.selectSnapshot(InputsGridState.selectedCells)
+    }
+}

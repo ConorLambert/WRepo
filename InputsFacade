@@ -1,0 +1,102 @@
+import { Select, Store } from "@ngxs/store";
+import { Dispatch } from "@ngxs-labs/dispatch-decorator";
+import { Observable } from "rxjs";
+import { Injectable } from "@angular/core";
+import { map, finalize } from "rxjs/operators";
+import { NotificationService } from "ClientApp/app/services/notification.service";
+import { ActivatedRoute } from "@angular/router";
+import { InputsState, InputsStateModel } from "ClientApp/app/_state/configurations/create-configuration/create-configuration-alv/inputs/inputs.state";
+import { InputsService, InputsViewModel, InputFileDto, ConfigModelParamInputDto } from "ClientApp/core/services/api.client.generated";
+import { SetInputsViewModel, UpdateConfigSetEntries } from "./inputs.action";
+import { CreateConfigurationShared } from "../../create-configuration.shared";
+import { SetInputsHasChanged } from "../create-configuration-alv.action";
+import { BaseFacade } from "../base-alv/base-alv.facade";
+
+@Injectable({ 
+    providedIn: 'root'
+})
+export class InputsFacade implements BaseFacade<ConfigModelParamInputDto> {
+
+    @Select(InputsState)
+    public stateModel$: Observable<InputsStateModel>;
+
+    constructor(
+        private inputService: InputsService,
+        private notify: NotificationService,
+        private route: ActivatedRoute,
+        private createConfigurationShared: CreateConfigurationShared,
+        private store: Store
+    ) { }
+    
+    @Dispatch()
+    getInputsViewModel = () => this.inputService
+        .getInputsViewModel(this.runGroupId)
+        .pipe(
+            map((result: InputsViewModel) => new SetInputsViewModel(result))
+        );
+
+    @Dispatch()
+    updateConfigSetEntries = (configSetEntries: ConfigModelParamInputDto[]) =>
+        new UpdateConfigSetEntries(configSetEntries);
+
+    //@Dispatch()
+    applyChanges = (modelParamId, selectedRowsSet) => {
+        let configSetEntries = this.configSetEntries();
+        selectedRowsSet
+            .filter(x => x.selectedRows)
+            .map(x => x.selectedRows)
+            .forEach(selectedRows => {
+                selectedRows.forEach(selectedRow => {
+                    selectedRow.modelParamId = modelParamId;
+                    // check if this entry already exists in configSetEntries
+                    let entry = this.findEntryInConfigSetEntries(selectedRow);
+                    if (entry != undefined) {
+                        entry.modelParamId = modelParamId;
+                    } else {
+                        let newConfigSetEntry = new ConfigModelParamInputDto();
+                        newConfigSetEntry.inputNameId = selectedRow.inputNameId;
+                        newConfigSetEntry.modelParamId = modelParamId;
+                        newConfigSetEntry.productId = selectedRow.productId;
+                        newConfigSetEntry.assetGroupId = selectedRow.assetGroupId;
+                        newConfigSetEntry.runTypeId = selectedRow.runTypeId;
+                        configSetEntries.push(newConfigSetEntry);
+                    }
+                })
+            });
+        this.store.dispatch([
+            new UpdateConfigSetEntries(configSetEntries),
+            new SetInputsHasChanged()
+        ]);
+    }
+
+    toggleDeletion = (entry: ConfigModelParamInputDto) => {
+        let targetEntry = this.configSetEntries().find(x => x == entry);
+        targetEntry.isDeleted = !entry.isDeleted;
+        this.store.dispatch([
+            new UpdateConfigSetEntries(this.configSetEntries()),
+            new SetInputsHasChanged()
+        ]);
+    }
+
+    // HELPER FUNCTIONS
+
+    configSetEntries(): ConfigModelParamInputDto[] {
+        return this.store.selectSnapshot(InputsState.configSetEntries);
+    }
+
+    configSetEntriesToBeSubmitted(): ConfigModelParamInputDto[] {
+        return this.store.selectSnapshot(InputsState.configSetEntriesToBeSubmitted);
+    }
+
+    findEntryInConfigSetEntries(entry: ConfigModelParamInputDto): ConfigModelParamInputDto {
+        return this.configSetEntries().find((x: ConfigModelParamInputDto) => 
+            x.productId === entry.productId && 
+            x.assetGroupId === entry.assetGroupId && 
+            x.runTypeId === entry.runTypeId &&
+            x.inputNameId === entry.inputNameId);
+    }
+
+    get runGroupId(): number {
+        return this.createConfigurationShared.runGroupId;
+    }
+}
